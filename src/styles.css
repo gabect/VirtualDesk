@@ -318,12 +318,22 @@ button {
 }
 
 .notebook.closed {
+  cursor: grab;
+}
+
+.notebook.closed:active,
+.notebook.closed.is-dragging {
+  cursor: grabbing;
+}
+
+.notebook.closed {
   width: var(--notebook-width);
   height: var(--notebook-height);
 }
 
 .notebook-cover {
   position: relative;
+  display: block;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -334,6 +344,12 @@ button {
     linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px),
     linear-gradient(135deg, #315e8d, #1c3c68 58%, #163354);
   box-shadow: 0 20px 34px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.18), inset -11px 0 18px rgba(255,255,255,.08);
+  cursor: inherit;
+}
+
+.notebook-cover:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, .82);
+  outline-offset: 4px;
 }
 
 .spiral {
@@ -370,6 +386,7 @@ button {
 }
 
 .notebook-open {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
@@ -378,6 +395,29 @@ button {
   border-radius: 18px;
   background: linear-gradient(90deg, #29466b 0 22px, #f3ead4 22px);
   box-shadow: 0 22px 38px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.5);
+}
+
+.notebook.open {
+  cursor: default;
+}
+
+.notebook.open::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 16px auto 16px 8px;
+  width: 28px;
+  border-radius: 999px;
+  cursor: grab;
+}
+
+.notebook.open.is-dragging::before,
+.notebook-drag-zone:active {
+  cursor: grabbing;
+}
+
+.notebook-drag-zone {
+  cursor: grab;
 }
 
 .notebook-toolbar,
