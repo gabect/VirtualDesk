@@ -16,6 +16,32 @@ const POMODORO_MODES = {
   longBreak: { label: 'Long Break', minutes: 15, seconds: 15 * 60 }
 };
 
+const FOCUS_STATIONS = {
+  lofi: {
+    label: 'Lo-fi / Deep Focus',
+    tracks: [
+      { title: 'Lo-fi Deep Focus — demo placeholder 01', url: '' },
+      { title: 'Lo-fi Deep Focus — demo placeholder 02', url: '' }
+    ]
+  },
+  edm: {
+    label: 'EDM',
+    tracks: [
+      { title: 'EDM Focus Drive — demo placeholder 01', url: '' },
+      { title: 'EDM Focus Drive — demo placeholder 02', url: '' }
+    ]
+  },
+  classical: {
+    label: 'Clásica Instrumental',
+    tracks: [
+      { title: 'Clásica Instrumental — demo placeholder 01', url: '' },
+      { title: 'Clásica Instrumental — demo placeholder 02', url: '' }
+    ]
+  }
+};
+
+const DEFAULT_FOCUS_STATION = 'lofi';
+
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const root = document.getElementById('root');
 let saveTimer = null;
@@ -24,6 +50,7 @@ let clockTimer = null;
 let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
+let pendingFocusAutoplayId = null;
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -52,6 +79,7 @@ let state = loadState();
 function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
   if (baseObject?.type === 'pomodoro') return normalizePomodoro(baseObject);
+  if (baseObject?.type === 'focusPlayer') return normalizeFocusPlayer(baseObject);
   if (baseObject?.type !== 'notebook') return baseObject;
   return {
     rotation: 0,
@@ -159,6 +187,7 @@ function createDock() {
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
+    ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
@@ -212,6 +241,39 @@ function createPomodoroObject(position = placeObject(108)) {
     completedCycles: 0,
     isRunning: false,
     lastTickAt: Date.now()
+  };
+}
+
+function createFocusPlayerObject(position = placeObject(142)) {
+  return {
+    id: makeId('focus-player'),
+    type: 'focusPlayer',
+    status: 'active',
+    ...position,
+    station: DEFAULT_FOCUS_STATION,
+    trackIndex: 0,
+    volume: 0.65
+  };
+}
+
+function getFocusStation(station = DEFAULT_FOCUS_STATION) {
+  return FOCUS_STATIONS[station] ? station : DEFAULT_FOCUS_STATION;
+}
+
+function getFocusTracks(station = DEFAULT_FOCUS_STATION) {
+  return FOCUS_STATIONS[getFocusStation(station)].tracks;
+}
+
+function normalizeFocusPlayer(object) {
+  const station = getFocusStation(object.station);
+  const tracks = getFocusTracks(station);
+  const trackIndex = tracks.length ? clamp(Math.floor(Number(object.trackIndex) || 0), 0, tracks.length - 1) : 0;
+  const volume = clamp(Number.isFinite(Number(object.volume)) ? Number(object.volume) : 0.65, 0, 1);
+  return {
+    ...object,
+    station,
+    trackIndex,
+    volume
   };
 }
 
@@ -883,6 +945,151 @@ function createPomodoroWidget(object) {
   return frame;
 }
 
+
+function isFocusPlayerDragZone(event) {
+  if (event.target.closest(inputSelector)) return false;
+  if (event.target.closest('.focus-player-grip')) return true;
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const edgeSize = 14;
+  return x <= edgeSize || y <= edgeSize || x >= rect.width - edgeSize || y >= rect.height - edgeSize;
+}
+
+function getFocusTrack(object) {
+  const tracks = getFocusTracks(object.station);
+  return tracks[object.trackIndex] || tracks[0] || { title: 'Sin tracks configurados', url: '' };
+}
+
+function getNextFocusTrackIndex(object, direction = 1) {
+  const tracks = getFocusTracks(object.station);
+  if (!tracks.length) return 0;
+  return (Number(object.trackIndex || 0) + direction + tracks.length) % tracks.length;
+}
+
+function updateFocusTimeDisplay(id, currentTime = 0, duration = 0) {
+  const display = document.querySelector(`[data-focus-player-id="${id}"] .focus-player-time`);
+  if (!display) return;
+  display.textContent = `${formatTimer(currentTime)} / ${Number.isFinite(duration) && duration > 0 ? formatTimer(duration) : '--:--'}`;
+}
+
+function updateFocusPlaybackState(id, isPlaying) {
+  const frame = document.querySelector(`[data-focus-player-id="${id}"]`);
+  const playButton = frame?.querySelector('.focus-play-toggle');
+  if (!frame || !playButton) return;
+  frame.classList.toggle('is-playing', isPlaying);
+  playButton.textContent = isPlaying ? 'Ⅱ' : '▶';
+  playButton.setAttribute('aria-label', isPlaying ? 'Pausar música de enfoque' : 'Reproducir música de enfoque');
+}
+
+function syncFocusAudio(audio, object) {
+  const track = getFocusTrack(object);
+  audio.volume = object.volume;
+  if (audio.dataset.src !== track.url) {
+    audio.dataset.src = track.url;
+    audio.src = track.url || '';
+    audio.load();
+  }
+}
+
+function playFocusAudio(audio, object) {
+  const track = getFocusTrack(object);
+  if (!track.url) {
+    showToast('Focus Player listo: reemplaza las URLs demo por tus audios.');
+    updateFocusPlaybackState(object.id, false);
+    return;
+  }
+
+  audio.play()
+    .then(() => updateFocusPlaybackState(object.id, true))
+    .catch(() => {
+      updateFocusPlaybackState(object.id, false);
+      showToast('El navegador bloqueó el audio. Pulsa Play otra vez.');
+    });
+}
+
+function moveFocusTrack(object, direction, shouldAutoplay = false) {
+  pendingFocusAutoplayId = shouldAutoplay ? object.id : null;
+  updateObject(object.id, { trackIndex: getNextFocusTrackIndex(object, direction) });
+}
+
+function createFocusPlayerWidget(object) {
+  const frame = createFrame(object, 'focus-player-widget', { canStart: isFocusPlayerDragZone });
+  frame.dataset.focusPlayerId = object.id;
+
+  const stationMeta = FOCUS_STATIONS[getFocusStation(object.station)];
+  const track = getFocusTrack(object);
+  const shell = el('div', 'focus-player-shell');
+  const header = el('header', 'focus-player-grip', { title: 'Arrastra desde la barra o los bordes' });
+  header.append(el('span', 'focus-player-led'), el('strong', '', { text: 'Focus Player' }), el('span', '', { text: stationMeta.label }));
+
+  const stationRow = el('div', 'focus-stations', { 'aria-label': 'Seleccionar estación de música' });
+  Object.entries(FOCUS_STATIONS).forEach(([station, meta]) => {
+    const button = el('button', object.station === station ? 'is-active' : '', {
+      type: 'button',
+      text: meta.label,
+      'aria-pressed': object.station === station ? 'true' : 'false',
+      onclick: () => updateObject(object.id, { station, trackIndex: 0 })
+    });
+    stationRow.append(button);
+  });
+
+  const display = el('div', 'focus-player-display');
+  const marquee = el('div', 'focus-track-marquee');
+  marquee.append(el('span', '', { text: track.title || 'Sin título' }));
+  display.append(marquee, el('div', 'focus-player-time', { text: '00:00 / --:--', 'aria-live': 'polite' }));
+
+  const audio = el('audio', '', { preload: 'metadata' });
+  syncFocusAudio(audio, object);
+  audio.addEventListener('loadedmetadata', () => updateFocusTimeDisplay(object.id, audio.currentTime, audio.duration));
+  audio.addEventListener('timeupdate', () => updateFocusTimeDisplay(object.id, audio.currentTime, audio.duration));
+  audio.addEventListener('play', () => updateFocusPlaybackState(object.id, true));
+  audio.addEventListener('pause', () => updateFocusPlaybackState(object.id, false));
+  audio.addEventListener('ended', () => moveFocusTrack(getObjectById(object.id, object), 1, true));
+  audio.addEventListener('error', () => {
+    updateFocusPlaybackState(object.id, false);
+    if (audio.currentSrc) showToast('No se pudo cargar esta pista de Focus Player.');
+  });
+
+  const controls = el('div', 'focus-player-controls');
+  controls.append(
+    el('button', '', { type: 'button', text: '⏮', 'aria-label': 'Pista anterior', onclick: () => moveFocusTrack(getObjectById(object.id, object), -1, !audio.paused) }),
+    el('button', 'focus-play-toggle primary', {
+      type: 'button',
+      text: '▶',
+      'aria-label': 'Reproducir música de enfoque',
+      onclick: () => {
+        if (audio.paused) playFocusAudio(audio, getObjectById(object.id, object));
+        else audio.pause();
+      }
+    }),
+    el('button', '', { type: 'button', text: '⏭', 'aria-label': 'Siguiente pista', onclick: () => moveFocusTrack(getObjectById(object.id, object), 1, !audio.paused) })
+  );
+
+  const volumeLabel = el('label', 'focus-volume');
+  const volume = el('input', '', { type: 'range', min: '0', max: '1', step: '0.01', value: object.volume, 'aria-label': 'Volumen del Focus Player' });
+  volume.addEventListener('input', (event) => {
+    const nextVolume = Number(event.target.value);
+    audio.volume = nextVolume;
+    updateObject(object.id, { volume: nextVolume }, false);
+  });
+  volumeLabel.append(el('span', '', { text: 'Vol' }), volume);
+
+  shell.append(header, stationRow, display, controls, volumeLabel, audio);
+  frame.append(shell);
+
+  window.requestAnimationFrame(() => {
+    updateFocusTimeDisplay(object.id, audio.currentTime, audio.duration);
+    if (pendingFocusAutoplayId === object.id) {
+      pendingFocusAutoplayId = null;
+      playFocusAudio(audio, object);
+    }
+  });
+
+  return frame;
+}
+
 function createClock() {
   window.clearInterval(clockTimer);
   const clock = el('aside', 'retro-clock', { 'aria-label': 'Reloj digital' });
@@ -896,6 +1103,7 @@ function getObjectTitle(object) {
   if (object.type === 'notebook') return 'Libreta';
   if (object.type === 'todo') return 'To-Do';
   if (object.type === 'pomodoro') return 'Pomodoro';
+  if (object.type === 'focusPlayer') return 'Focus Player';
   return 'Sticky Note';
 }
 
@@ -903,6 +1111,7 @@ function getObjectEmoji(object) {
   if (object.type === 'notebook') return '📓';
   if (object.type === 'todo') return '☑️';
   if (object.type === 'pomodoro') return '⏱️';
+  if (object.type === 'focusPlayer') return '🎧';
   return '🗒️';
 }
 
@@ -914,6 +1123,7 @@ function getObjectExcerpt(object) {
     return tasks.map((task) => `${task.done ? '✓' : '•'} ${task.text}`).join(' · ');
   }
   if (object.type === 'pomodoro') return `${POMODORO_MODES[object.mode]?.label || 'Work'} · ${formatTimer(object.remainingSeconds)}`;
+  if (object.type === 'focusPlayer') return `${FOCUS_STATIONS[getFocusStation(object.station)].label} · ${getFocusTrack(object).title}`;
   return object.content || 'Nota sin texto';
 }
 
@@ -1071,6 +1281,7 @@ function render() {
     if (object.type === 'notebook') layer.append(createNotebook(object));
     if (object.type === 'todo') layer.append(createTodoList(object));
     if (object.type === 'pomodoro') layer.append(createPomodoroWidget(object));
+    if (object.type === 'focusPlayer') layer.append(createFocusPlayerWidget(object));
   });
   main.append(layer);
   if (trashDialogOpen) main.append(createTrashDialog());
