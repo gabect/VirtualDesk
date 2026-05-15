@@ -5,10 +5,7 @@ const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
 
 const NOTEBOOK_ROTATION_LIMIT = 45;
 const NOTEBOOK_MIN_SCALE = 0.65;
-const NOTEBOOK_DEFAULT_DIMENSIONS = {
-  closed: { width: 210, height: 270 },
-  open: { width: 460, height: 430 }
-};
+const NOTEBOOK_DEFAULT_DIMENSIONS = { width: 210, height: 270 };
 
 const POMODORO_MODES = {
   work: { label: 'Work', minutes: 25, seconds: 25 * 60 },
@@ -69,7 +66,8 @@ const defaultState = {
       ],
       flipDirection: 'next',
       rotation: 0,
-      notebookScale: 1
+      notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width,
+      notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height
     }
   ]
 };
@@ -81,12 +79,18 @@ function normalizeObject(object) {
   if (baseObject?.type === 'pomodoro') return normalizePomodoro(baseObject);
   if (baseObject?.type === 'focusPlayer') return normalizeFocusPlayer(baseObject);
   if (baseObject?.type !== 'notebook') return baseObject;
+
+  const legacyScale = Math.max(NOTEBOOK_MIN_SCALE, Number(baseObject.notebookScale) || 1);
+  const legacyBase = baseObject.open ? { width: 460, height: 430 } : NOTEBOOK_DEFAULT_DIMENSIONS;
+  const notebookWidth = Math.max(NOTEBOOK_DEFAULT_DIMENSIONS.width * NOTEBOOK_MIN_SCALE, Number(baseObject.notebookWidth) || legacyBase.width * legacyScale);
+  const notebookHeight = Math.max(NOTEBOOK_DEFAULT_DIMENSIONS.height * NOTEBOOK_MIN_SCALE, Number(baseObject.notebookHeight) || legacyBase.height * legacyScale);
+
   return {
     rotation: 0,
-    notebookScale: 1,
     ...baseObject,
     rotation: clampNotebookRotation(baseObject.rotation),
-    notebookScale: Math.max(NOTEBOOK_MIN_SCALE, Number(baseObject.notebookScale) || 1)
+    notebookWidth,
+    notebookHeight
   };
 }
 
@@ -183,7 +187,7 @@ function applyBackground(main) {
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
   const buttons = [
-    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookScale: 1 })],
+    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
@@ -308,15 +312,11 @@ function formatTimer(seconds) {
   return `${String(minutes).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
 }
 
-function getNotebookMode(object) {
-  return object.open ? 'open' : 'closed';
-}
-
 function getNotebookDimensions(object) {
-  const mode = getNotebookMode(object);
-  const base = NOTEBOOK_DEFAULT_DIMENSIONS[mode];
-  const scale = Number(object.notebookScale) || 1;
-  return { width: base.width * scale, height: base.height * scale, base };
+  const width = Number(object.notebookWidth) || NOTEBOOK_DEFAULT_DIMENSIONS.width;
+  const height = Number(object.notebookHeight) || NOTEBOOK_DEFAULT_DIMENSIONS.height;
+  const scale = width / NOTEBOOK_DEFAULT_DIMENSIONS.width;
+  return { width, height, scale };
 }
 
 function getFrameRotation(frame, fallback = 0) {
@@ -525,10 +525,8 @@ function createFrame(object, className, dragOptions) {
   return frame;
 }
 
-function applyNotebookFrameSize(frame, object, scale = Number(object.notebookScale) || 1) {
-  const base = NOTEBOOK_DEFAULT_DIMENSIONS[getNotebookMode(object)];
-  const width = base.width * scale;
-  const height = base.height * scale;
+function applyNotebookFrameSize(frame, object) {
+  const { width, height, scale } = getNotebookDimensions(object);
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;
   frame.style.setProperty('--notebook-width', `${width}px`);
@@ -536,18 +534,24 @@ function applyNotebookFrameSize(frame, object, scale = Number(object.notebookSca
   frame.style.setProperty('--notebook-scale', scale);
 }
 
-function fitNotebookScaleToViewport(object, requestedScale) {
+function fitNotebookDimensionsToViewport(object, requestedWidth, requestedHeight) {
   const current = getObjectById(object.id, object);
-  const base = NOTEBOOK_DEFAULT_DIMENSIONS[getNotebookMode(current)];
+  const minWidth = NOTEBOOK_DEFAULT_DIMENSIONS.width * NOTEBOOK_MIN_SCALE;
+  const minHeight = NOTEBOOK_DEFAULT_DIMENSIONS.height * NOTEBOOK_MIN_SCALE;
+  const width = Math.max(minWidth, Number(requestedWidth) || NOTEBOOK_DEFAULT_DIMENSIONS.width);
+  const height = Math.max(minHeight, Number(requestedHeight) || NOTEBOOK_DEFAULT_DIMENSIONS.height);
   const radians = Math.abs(clampNotebookRotation(current.rotation)) * Math.PI / 180;
-  const rotatedWidth = base.width * Math.cos(radians) + base.height * Math.sin(radians);
-  const rotatedHeight = base.width * Math.sin(radians) + base.height * Math.cos(radians);
-  const rightLimit = (window.innerWidth - current.x - 8) * 2 / (base.width + rotatedWidth);
-  const bottomLimit = (window.innerHeight - current.y - 8) * 2 / (base.height + rotatedHeight);
-  const leftLimit = rotatedWidth > base.width ? Math.max(0, (current.x - 8) * 2 / (rotatedWidth - base.width)) : Infinity;
-  const topLimit = rotatedHeight > base.height ? Math.max(0, (current.y - 8) * 2 / (rotatedHeight - base.height)) : Infinity;
-  const maxScale = Math.max(NOTEBOOK_MIN_SCALE, Math.min(rightLimit, bottomLimit, leftLimit, topLimit));
-  return clamp(requestedScale, NOTEBOOK_MIN_SCALE, maxScale);
+  const rotatedWidth = width * Math.cos(radians) + height * Math.sin(radians);
+  const rotatedHeight = width * Math.sin(radians) + height * Math.cos(radians);
+  const rightLimit = (window.innerWidth - current.x - 8) * 2 / (width + rotatedWidth);
+  const bottomLimit = (window.innerHeight - current.y - 8) * 2 / (height + rotatedHeight);
+  const leftLimit = rotatedWidth > width ? Math.max(0, (current.x - 8) * 2 / (rotatedWidth - width)) : Infinity;
+  const topLimit = rotatedHeight > height ? Math.max(0, (current.y - 8) * 2 / (rotatedHeight - height)) : Infinity;
+  const viewportScale = clamp(Math.min(rightLimit, bottomLimit, leftLimit, topLimit), 0, 1);
+  return {
+    notebookWidth: Math.max(minWidth, width * viewportScale),
+    notebookHeight: Math.max(minHeight, height * viewportScale)
+  };
 }
 
 function addNotebookResize(frame, object) {
@@ -561,11 +565,12 @@ function addNotebookResize(frame, object) {
     const dx = point.clientX - resize.startX;
     const dy = point.clientY - resize.startY;
     const aspectDelta = Math.max(dx, dy * resize.aspect);
-    const requestedScale = (resize.startWidth + aspectDelta) / resize.base.width;
+    const requestedWidth = resize.startWidth + aspectDelta;
+    const requestedHeight = resize.startHeight + aspectDelta / resize.aspect;
     const current = getObjectById(object.id, object);
-    const notebookScale = fitNotebookScaleToViewport(current, requestedScale);
-    applyNotebookFrameSize(frame, current, notebookScale);
-    updateObject(object.id, { notebookScale }, false);
+    const dimensions = fitNotebookDimensionsToViewport(current, requestedWidth, requestedHeight);
+    applyNotebookFrameSize(frame, { ...current, ...dimensions });
+    updateObject(object.id, dimensions, false);
   };
 
   const stop = () => {
@@ -586,8 +591,8 @@ function addNotebookResize(frame, object) {
     bringToFront(object.id, false);
     const point = getEventPoint(event);
     const current = getObjectById(object.id, object);
-    const { width, height, base } = getNotebookDimensions(current);
-    resize = { startX: point.clientX, startY: point.clientY, startWidth: width, aspect: width / height, base };
+    const { width, height } = getNotebookDimensions(current);
+    resize = { startX: point.clientX, startY: point.clientY, startWidth: width, startHeight: height, aspect: width / height };
     frame.classList.add('is-resizing');
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', stop);
@@ -689,7 +694,7 @@ function createNotebook(object) {
         onQuickClick: () => updateObject(object.id, { open: true })
       };
   const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'}`, dragOptions);
-  applyNotebookFrameSize(frame, object, fitNotebookScaleToViewport(object, Number(object.notebookScale) || 1));
+  applyNotebookFrameSize(frame, object);
   addNotebookRotation(frame, object);
   addNotebookResize(frame, object);
   if (!object.open) {
