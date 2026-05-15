@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -16,6 +16,15 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
+
+getRedirectResult(auth).then((result) => {
+  if (result) {
+    console.log('Inicio de sesión exitoso por redirección', result.user);
+    showToast('Sincronizando...');
+  }
+}).catch((error) => {
+  console.error('Error en la redirección de Auth:', error);
+});
 
 const STORAGE_KEY = 'virtualDeskState';
 const DESK_SETTINGS_WIDGET_ID = '__desk-settings__';
@@ -63,6 +72,7 @@ const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16)
 const root = document.getElementById('root');
 let saveTimer = null;
 let toastTimer = null;
+let pendingToastMessage = '';
 let clockTimer = null;
 let pomodoroTimer = null;
 let pomodoroAudioContext = null;
@@ -136,18 +146,19 @@ function loadState() {
   }
 }
 
+function saveLocalState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
 function persist() {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
     if (activeUser) {
-      persistCloudState().catch((error) => {
-        console.error('No se pudo sincronizar con Firestore', error);
-        showToast('No se pudo sincronizar con la nube');
-      });
+      persistCloudState();
       return;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    saveLocalState();
   }, 60);
 }
 
@@ -172,17 +183,24 @@ async function persistCloudState({ force = false } = {}) {
   if (!activeUser || (cloudLoading && !force)) return;
   const widgetsRef = getWidgetsCollectionRef();
   const nextIds = new Set([DESK_SETTINGS_WIDGET_ID, ...state.objects.map((object) => object.id)]);
-  const writes = [
-    setDoc(doc(widgetsRef, DESK_SETTINGS_WIDGET_ID), getDeskSettingsDocument()),
-    ...state.objects.map((object) => setDoc(doc(widgetsRef, object.id), { ...object }))
-  ];
 
-  lastCloudWidgetIds.forEach((id) => {
-    if (!nextIds.has(id)) writes.push(deleteDoc(doc(widgetsRef, id)));
-  });
+  try {
+    const writes = [
+      setDoc(doc(widgetsRef, DESK_SETTINGS_WIDGET_ID), getDeskSettingsDocument()),
+      ...state.objects.map((object) => setDoc(doc(widgetsRef, object.id), { ...object }))
+    ];
 
-  await Promise.all(writes);
-  lastCloudWidgetIds = nextIds;
+    lastCloudWidgetIds.forEach((id) => {
+      if (!nextIds.has(id)) writes.push(deleteDoc(doc(widgetsRef, id)));
+    });
+
+    await Promise.all(writes);
+    lastCloudWidgetIds = nextIds;
+  } catch (error) {
+    console.error('No se pudo sincronizar con Firestore', error);
+    saveLocalState();
+    showToast('Guardado localmente (Sin conexión)');
+  }
 }
 
 async function loadCloudState(user) {
@@ -208,7 +226,8 @@ async function loadCloudState(user) {
     if (snapshot.empty) await persistCloudState({ force: true });
   } catch (error) {
     console.error('No se pudo cargar Firestore', error);
-    showToast('No se pudo cargar la nube; se mantiene el escritorio actual');
+    state = loadState();
+    showToast('Guardado localmente (Sin conexión)');
   } finally {
     cloudLoading = false;
     render();
@@ -273,7 +292,10 @@ function placeObject(offset = 0) {
 
 function showToast(message) {
   const toast = document.querySelector('.toast');
-  if (!toast) return;
+  if (!toast) {
+    pendingToastMessage = message;
+    return;
+  }
   toast.textContent = message;
   toast.hidden = false;
   window.clearTimeout(toastTimer);
@@ -290,19 +312,26 @@ function applyBackground(main) {
   }
 }
 
-function handleGoogleAuth() {
-  if (activeUser) {
-    signOut(auth).catch((error) => {
-      console.error('No se pudo cerrar sesión', error);
-      showToast('No se pudo cerrar sesión');
-    });
-    return;
-  }
-
-  signInWithPopup(auth, googleProvider).catch((error) => {
-    console.error('No se pudo iniciar sesión con Google', error);
-    showToast('No se pudo iniciar sesión con Google');
+function handleGoogleSignOut() {
+  signOut(auth).catch((error) => {
+    console.error('No se pudo cerrar sesión', error);
+    showToast('No se pudo cerrar sesión');
   });
+}
+
+function createGoogleLoginButton() {
+  const label = activeUser ? 'Cerrar sesión de Google' : 'Iniciar sesión con Google';
+  const button = el('button', 'dock-button google-login-icon', { title: label, 'aria-label': label });
+  button.append(el('span', '', { text: activeUser ? '☁️' : 'G' }));
+  button.addEventListener('click', () => {
+    if (activeUser) {
+      handleGoogleSignOut();
+      return;
+    }
+
+    signInWithRedirect(auth, googleProvider);
+  });
+  return button;
 }
 
 function createDock() {
@@ -322,6 +351,7 @@ function createDock() {
     button.append(el('span', '', { text: icon }));
     dock.append(button);
   });
+  dock.append(createGoogleLoginButton());
   return dock;
 }
 
@@ -1426,6 +1456,11 @@ function render() {
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
   ensurePomodoroTicker();
+  if (pendingToastMessage) {
+    const message = pendingToastMessage;
+    pendingToastMessage = '';
+    showToast(message);
+  }
 }
 
 onAuthStateChanged(auth, async (user) => {
