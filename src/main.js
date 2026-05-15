@@ -1,4 +1,33 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDNRvnqj1tWfJKw4CWJkmSw_dlYbVCZ7VI",
+  authDomain: "virtual-desk-b47de.firebaseapp.com",
+  projectId: "virtual-desk-b47de",
+  storageBucket: "virtual-desk-b47de.firebasestorage.app",
+  messagingSenderId: "937317414102",
+  appId: "1:937317414102:web:ef642de1dbfc78d33e0577",
+  measurementId: "G-RR8R3J5KGE"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
+
+getRedirectResult(auth).then((result) => {
+  if (result) {
+    console.log('Inicio de sesión exitoso por redirección', result.user);
+    showToast('Sincronizando...');
+  }
+}).catch((error) => {
+  console.error('Error en la redirección de Auth:', error);
+});
+
 const STORAGE_KEY = 'virtualDeskState';
+const DESK_SETTINGS_WIDGET_ID = '__desk-settings__';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
 const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
@@ -43,11 +72,16 @@ const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16)
 const root = document.getElementById('root');
 let saveTimer = null;
 let toastTimer = null;
+let pendingToastMessage = '';
 let clockTimer = null;
 let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
+let activeUser = null;
+let authReady = false;
+let cloudLoading = false;
+let lastCloudWidgetIds = new Set();
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -112,11 +146,102 @@ function loadState() {
   }
 }
 
+function saveLocalState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
 function persist() {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (activeUser) {
+      persistCloudState();
+      return;
+    }
+
+    saveLocalState();
   }, 60);
+}
+
+function getWidgetsCollectionRef(uid = activeUser?.uid) {
+  if (!uid) return null;
+  return collection(db, 'users', uid, 'widgets');
+}
+
+function getDeskSettingsDocument() {
+  return {
+    id: DESK_SETTINGS_WIDGET_ID,
+    type: 'deskSettings',
+    background: state.background
+  };
+}
+
+function isDeskSettingsDocument(data) {
+  return data?.id === DESK_SETTINGS_WIDGET_ID || data?.type === 'deskSettings';
+}
+
+async function persistCloudState({ force = false } = {}) {
+  if (!activeUser || (cloudLoading && !force)) return;
+  const widgetsRef = getWidgetsCollectionRef();
+  const nextIds = new Set([DESK_SETTINGS_WIDGET_ID, ...state.objects.map((object) => object.id)]);
+
+  try {
+    const writes = [
+      setDoc(doc(widgetsRef, DESK_SETTINGS_WIDGET_ID), getDeskSettingsDocument()),
+      ...state.objects.map((object) => setDoc(doc(widgetsRef, object.id), { ...object }))
+    ];
+
+    lastCloudWidgetIds.forEach((id) => {
+      if (!nextIds.has(id)) writes.push(deleteDoc(doc(widgetsRef, id)));
+    });
+
+    await Promise.all(writes);
+    lastCloudWidgetIds = nextIds;
+  } catch (error) {
+    console.error('No se pudo sincronizar con Firestore', error);
+    saveLocalState();
+    showToast('Guardado localmente (Sin conexión)');
+  }
+}
+
+async function loadCloudState(user) {
+  cloudLoading = true;
+  try {
+    const snapshot = await getDocs(getWidgetsCollectionRef(user.uid));
+    let background = defaultState.background;
+    const objects = [];
+    const cloudIds = new Set();
+
+    snapshot.forEach((item) => {
+      const data = item.data();
+      cloudIds.add(item.id);
+      if (isDeskSettingsDocument(data)) {
+        background = { ...defaultState.background, ...(data.background || {}) };
+        return;
+      }
+      objects.push({ id: item.id, ...data });
+    });
+
+    lastCloudWidgetIds = cloudIds;
+    state = normalizeState(snapshot.empty ? structuredClone(defaultState) : { background, objects });
+    if (snapshot.empty) await persistCloudState({ force: true });
+  } catch (error) {
+    console.error('No se pudo cargar Firestore', error);
+    state = loadState();
+    showToast('Guardado localmente (Sin conexión)');
+  } finally {
+    cloudLoading = false;
+    render();
+  }
+}
+
+function getSyncStatusLabel() {
+  if (!authReady || cloudLoading) return 'Conectando...';
+  return activeUser ? 'Sincronizado' : 'Modo Invitado';
+}
+
+function getSyncStatusDetail() {
+  if (!authReady || cloudLoading) return 'Verificando sesión';
+  return activeUser ? (activeUser.displayName || activeUser.email || 'Google') : 'Guardado local';
 }
 
 function setState(updater, shouldRender = true) {
@@ -167,7 +292,10 @@ function placeObject(offset = 0) {
 
 function showToast(message) {
   const toast = document.querySelector('.toast');
-  if (!toast) return;
+  if (!toast) {
+    pendingToastMessage = message;
+    return;
+  }
   toast.textContent = message;
   toast.hidden = false;
   window.clearTimeout(toastTimer);
@@ -182,6 +310,28 @@ function applyBackground(main) {
     main.style.backgroundImage = '';
     main.style.backgroundColor = state.background.value;
   }
+}
+
+function handleGoogleSignOut() {
+  signOut(auth).catch((error) => {
+    console.error('No se pudo cerrar sesión', error);
+    showToast('No se pudo cerrar sesión');
+  });
+}
+
+function createGoogleLoginButton() {
+  const label = activeUser ? 'Cerrar sesión de Google' : 'Iniciar sesión con Google';
+  const button = el('button', 'dock-button google-login-icon', { title: label, 'aria-label': label });
+  button.append(el('span', '', { text: activeUser ? '☁️' : 'G' }));
+  button.addEventListener('click', () => {
+    if (activeUser) {
+      handleGoogleSignOut();
+      return;
+    }
+
+    signInWithRedirect(auth, googleProvider);
+  });
+  return button;
 }
 
 function createDock() {
@@ -200,6 +350,7 @@ function createDock() {
     button.append(el('span', '', { text: icon }));
     dock.append(button);
   });
+  dock.append(createGoogleLoginButton());
   return dock;
 }
 
@@ -1095,6 +1246,17 @@ function createFocusPlayerWidget(object) {
   return frame;
 }
 
+function createSyncIndicator() {
+  const indicator = el('aside', `sync-indicator ${activeUser ? 'is-online' : 'is-guest'}`, {
+    'aria-live': 'polite',
+    'aria-label': `Estado de sincronización: ${getSyncStatusLabel()}`
+  });
+  const copy = el('div');
+  copy.append(el('strong', '', { text: getSyncStatusLabel() }), el('small', '', { text: getSyncStatusDetail() }));
+  indicator.append(el('span', 'sync-dot', { 'aria-hidden': 'true' }), copy);
+  return indicator;
+}
+
 function createClock() {
   window.clearInterval(clockTimer);
   const clock = el('aside', 'retro-clock', { 'aria-label': 'Reloj digital' });
@@ -1277,7 +1439,7 @@ function render() {
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
   const widgets = el('section', 'fixed-widgets');
-  widgets.append(createClock(), createCalendar());
+  widgets.append(createSyncIndicator(), createClock(), createCalendar());
   main.append(widgets);
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
@@ -1293,6 +1455,26 @@ function render() {
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
   ensurePomodoroTicker();
+  if (pendingToastMessage) {
+    const message = pendingToastMessage;
+    pendingToastMessage = '';
+    showToast(message);
+  }
 }
+
+onAuthStateChanged(auth, async (user) => {
+  activeUser = user;
+  authReady = true;
+  lastCloudWidgetIds = new Set();
+
+  if (user) {
+    await loadCloudState(user);
+    showToast('Escritorio sincronizado con Google');
+    return;
+  }
+
+  state = loadState();
+  render();
+});
 
 render();

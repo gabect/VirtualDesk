@@ -96,6 +96,22 @@ button {
   filter: drop-shadow(0 1px 1px rgba(255,255,255,.8));
 }
 
+.dock-button.google-login-icon {
+  color: #1b3c73;
+  font-weight: 900;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.98), rgba(255,255,255,.55) 38%, rgba(185,214,255,.26) 68%),
+    linear-gradient(145deg, rgba(255,255,255,.74), rgba(121,166,230,.32));
+  border: 1px solid rgba(255, 255, 255, .56);
+  box-shadow: inset 0 1px rgba(255,255,255,.96), inset 0 -10px 18px rgba(77,123,190,.17), 0 12px 24px rgba(0,0,0,.24);
+  backdrop-filter: blur(14px) saturate(145%);
+}
+
+.dock-button.google-login-icon span {
+  font-family: Inter, "Lucida Grande", "Helvetica Neue", Arial, sans-serif;
+  font-size: 25px;
+}
+
 .background-panel,
 .fixed-widgets {
   position: fixed;
@@ -168,6 +184,56 @@ button {
   display: grid;
   gap: 14px;
   width: 240px;
+}
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.44);
+  border-radius: 17px;
+  color: #1d2e45;
+  background: linear-gradient(145deg, rgba(255,255,255,.68), rgba(255,255,255,.25));
+  box-shadow: 0 12px 28px rgba(0,0,0,.18), inset 0 1px rgba(255,255,255,.88);
+  backdrop-filter: blur(15px) saturate(140%);
+}
+
+.sync-indicator div {
+  display: grid;
+  gap: 1px;
+}
+
+.sync-indicator strong {
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+
+.sync-indicator small {
+  max-width: 174px;
+  overflow: hidden;
+  font-size: 11px;
+  opacity: .72;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #9ba8b7;
+  box-shadow: 0 0 0 5px rgba(155,168,183,.16), inset 0 1px rgba(255,255,255,.8);
+}
+
+.sync-indicator.is-online .sync-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgba(34,197,94,.16), 0 0 16px rgba(34,197,94,.58), inset 0 1px rgba(255,255,255,.8);
+}
+
+.sync-indicator.is-guest .sync-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 5px rgba(245,158,11,.18), inset 0 1px rgba(255,255,255,.8);
 }
 
 .retro-clock {
