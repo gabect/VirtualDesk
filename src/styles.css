@@ -1179,3 +1179,228 @@ button {
     font-size: 39px;
   }
 }
+
+.focus-player-widget {
+  width: 306px;
+  cursor: default;
+  filter: drop-shadow(0 18px 26px rgba(0,0,0,.22));
+}
+
+.focus-player-widget.is-dragging,
+.focus-player-grip:active {
+  cursor: grabbing;
+}
+
+.focus-player-shell {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 13px 14px;
+  border: 1px solid rgba(255,255,255,.58);
+  border-radius: 23px;
+  color: #1d2a3e;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.76), rgba(201,214,230,.42) 48%, rgba(255,255,255,.2)),
+    linear-gradient(160deg, rgba(43,57,82,.26), rgba(255,255,255,.28));
+  box-shadow:
+    0 22px 38px rgba(0,0,0,.25),
+    inset 0 1px rgba(255,255,255,.95),
+    inset 0 -18px 32px rgba(39,53,75,.13);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.focus-player-shell::before,
+.focus-player-shell::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.focus-player-shell::before {
+  inset: 5px;
+  border: 1px solid rgba(255,255,255,.38);
+  border-radius: 19px;
+}
+
+.focus-player-shell::after {
+  top: -44px;
+  right: -54px;
+  width: 160px;
+  height: 116px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,255,255,.72), transparent 68%);
+  transform: rotate(18deg);
+}
+
+.focus-player-grip {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin: -4px -4px 8px;
+  padding: 7px 9px;
+  border-radius: 16px;
+  color: rgba(29,42,62,.82);
+  background: linear-gradient(rgba(255,255,255,.48), rgba(255,255,255,.12));
+  font-size: 10px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  cursor: grab;
+}
+
+.focus-player-grip span:last-child {
+  max-width: 116px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-player-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #77d8ff;
+  box-shadow: 0 0 10px rgba(67,183,255,.85), inset 0 1px rgba(255,255,255,.8);
+}
+
+.focus-player-widget.is-playing .focus-player-led {
+  background: #9ef1bd;
+  box-shadow: 0 0 12px rgba(76,226,127,.92), inset 0 1px rgba(255,255,255,.85);
+}
+
+.focus-stations,
+.focus-player-controls,
+.focus-volume {
+  position: relative;
+  z-index: 1;
+}
+
+.focus-stations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.focus-stations button,
+.focus-player-controls button {
+  border: 1px solid rgba(31,47,66,.22);
+  color: #25364c;
+  background: linear-gradient(#fff, #d8e3ed 55%, #b6c4d0);
+  box-shadow: inset 0 1px rgba(255,255,255,.92), inset 0 -6px 10px rgba(39,59,82,.13), 0 4px 9px rgba(0,0,0,.14);
+  user-select: none;
+}
+
+.focus-stations button {
+  min-height: 32px;
+  padding: 0 4px;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.focus-stations button.is-active {
+  color: #112f42;
+  background: linear-gradient(#9fe7ff, #51b5e3 58%, #2d84b6);
+  box-shadow: inset 0 3px 9px rgba(17,76,111,.32), 0 0 15px rgba(78,185,230,.42);
+  transform: translateY(1px);
+}
+
+.focus-player-display {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px 9px;
+  border: 2px solid rgba(13,21,27,.48);
+  border-radius: 15px;
+  color: #10231f;
+  font-family: "Share Tech Mono", monospace;
+  background:
+    linear-gradient(90deg, rgba(20,30,25,.08) 1px, transparent 1px) 0 0 / 8px 100%,
+    linear-gradient(#c3d3ad, #879b74);
+  box-shadow: inset 0 2px 9px rgba(255,255,255,.42), inset 0 -5px 14px rgba(0,0,0,.28), 0 9px 18px rgba(0,0,0,.16);
+  text-shadow: 0 0 2px rgba(18,35,31,.38);
+}
+
+.focus-track-marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 14px;
+  letter-spacing: .08em;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.focus-track-marquee span {
+  display: inline-block;
+  min-width: 100%;
+  padding-left: 100%;
+  animation: focusMarquee 11s linear infinite;
+}
+
+.focus-player-time {
+  text-align: right;
+  font-size: 13px;
+  letter-spacing: .08em;
+}
+
+.focus-player-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.focus-player-controls button {
+  min-height: 36px;
+  border-radius: 13px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.focus-player-controls button.primary {
+  color: #f6fbff;
+  background: linear-gradient(#5ea7ff, #2367c6 58%, #174c96);
+  text-shadow: 0 1px rgba(0,0,0,.22);
+}
+
+.focus-volume {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.focus-volume input[type="range"] {
+  width: 100%;
+  accent-color: #2d84d7;
+}
+
+.trash-preview.focusPlayer {
+  background: linear-gradient(135deg, rgba(159,231,255,.86), rgba(45,132,182,.68));
+}
+
+@keyframes focusMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-track-marquee span {
+    padding-left: 0;
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .focus-player-widget {
+    width: min(306px, calc(100vw - 24px));
+  }
+}
