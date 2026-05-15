@@ -350,6 +350,7 @@ function applyNotebookFrameSize(frame, object, scale = Number(object.notebookSca
   frame.style.height = `${height}px`;
   frame.style.setProperty('--notebook-width', `${width}px`);
   frame.style.setProperty('--notebook-height', `${height}px`);
+  frame.style.setProperty('--notebook-scale', scale);
 }
 
 function fitNotebookScaleToViewport(object, requestedScale) {

@@ -313,6 +313,7 @@ button {
 .notebook {
   --notebook-width: 210px;
   --notebook-height: 270px;
+  --notebook-scale: 1;
   transform-origin: center center;
   transition: transform .34s cubic-bezier(.2, .8, .2, 1), filter .18s ease;
 }
@@ -369,14 +370,15 @@ button {
 .cover-title {
   margin-top: 86px;
   font-family: Georgia, serif;
-  font-size: 31px;
+  font-size: calc(31px * var(--notebook-scale));
   font-weight: 800;
 }
 
 .cover-subtitle {
   margin-top: 16px;
   opacity: .7;
-  letter-spacing: 1px;
+  font-size: calc(13px * var(--notebook-scale));
+  letter-spacing: calc(1px * var(--notebook-scale));
   text-transform: uppercase;
 }
 
@@ -464,7 +466,7 @@ button {
   color: #253044;
   background: transparent;
   font-family: "Patrick Hand", cursive;
-  font-size: 23px;
+  font-size: clamp(9px, calc(11px * var(--notebook-scale)), 13px);
   line-height: 1.18;
 }
 
@@ -684,7 +686,4 @@ button {
     width: min(270px, calc(100vw - 24px));
   }
 
-  .notebook-page textarea {
-    font-size: 21px;
-  }
 }
