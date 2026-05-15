@@ -1,3 +1,4 @@
+// For GitHub Pages auth, add gabect.github.io in Firebase Authentication > Settings > Authorized domains.
 const firebaseConfig = {
   apiKey: "AIzaSyDNRvnqj1tWfJKw4CWJkmSw_dlYbVCZ7VI",
   authDomain: "virtual-desk-b47de.firebaseapp.com",
@@ -284,6 +285,13 @@ function placeObject(offset = 0) {
   return { x: Math.min(window.innerWidth - 280, 132 + offset), y: 96 + offset };
 }
 
+function showAuthErrorToast(action, error) {
+  const code = error?.code || 'auth/unknown';
+  const message = error?.message || 'Error desconocido de Firebase Authentication';
+  console.error(`${action}: ${code} - ${message}`, { code, message, error });
+  showToast(`${action}: ${code} - ${message}`);
+}
+
 function showToast(message) {
   const toast = document.querySelector('.toast');
   if (!toast) {
@@ -330,8 +338,7 @@ function handleGoogleAuth() {
   }
 
   firebaseApi.signInWithRedirect(auth, googleProvider).catch((error) => {
-    console.error('No se pudo iniciar sesión', error);
-    showToast('No se pudo iniciar sesión con Google');
+    showAuthErrorToast('No se pudo iniciar sesión con Google', error);
   });
 }
 
@@ -1497,7 +1504,7 @@ async function initializeFirebaseInBackground() {
         showToast('Sincronizando...');
       }
     }).catch((error) => {
-      console.error('Error en la redirección de Auth:', error);
+      showAuthErrorToast('Error en la redirección de Auth', error);
     });
 
     firebaseApi.onAuthStateChanged(auth, async (user) => {
