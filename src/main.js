@@ -10,11 +10,19 @@ const NOTEBOOK_DEFAULT_DIMENSIONS = {
   open: { width: 460, height: 430 }
 };
 
+const POMODORO_MODES = {
+  work: { label: 'Work', minutes: 25, seconds: 25 * 60 },
+  shortBreak: { label: 'Short Break', minutes: 5, seconds: 5 * 60 },
+  longBreak: { label: 'Long Break', minutes: 15, seconds: 15 * 60 }
+};
+
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const root = document.getElementById('root');
 let saveTimer = null;
 let toastTimer = null;
 let clockTimer = null;
+let pomodoroTimer = null;
+let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 
 const defaultState = {
@@ -43,6 +51,7 @@ let state = loadState();
 
 function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
+  if (baseObject?.type === 'pomodoro') return normalizePomodoro(baseObject);
   if (baseObject?.type !== 'notebook') return baseObject;
   return {
     rotation: 0,
@@ -149,6 +158,7 @@ function createDock() {
     ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookScale: 1 })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
+    ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
@@ -189,6 +199,51 @@ function clamp(value, min, max) {
 
 function clampNotebookRotation(value = 0) {
   return clamp(Number(value) || 0, -NOTEBOOK_ROTATION_LIMIT, NOTEBOOK_ROTATION_LIMIT);
+}
+
+function createPomodoroObject(position = placeObject(108)) {
+  return {
+    id: makeId('pomodoro'),
+    type: 'pomodoro',
+    status: 'active',
+    ...position,
+    mode: 'work',
+    remainingSeconds: POMODORO_MODES.work.seconds,
+    completedCycles: 0,
+    isRunning: false,
+    lastTickAt: Date.now()
+  };
+}
+
+function normalizePomodoro(object) {
+  const mode = POMODORO_MODES[object.mode] ? object.mode : 'work';
+  let remainingSeconds = Number.isFinite(Number(object.remainingSeconds))
+    ? Math.max(0, Math.floor(Number(object.remainingSeconds)))
+    : POMODORO_MODES[mode].seconds;
+  const completedCycles = clamp(Math.floor(Number(object.completedCycles) || 0), 0, 4);
+  const lastTickAt = Number(object.lastTickAt) || Date.now();
+  if (object.isRunning) {
+    const elapsed = Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000));
+    remainingSeconds = Math.max(0, remainingSeconds - elapsed);
+  }
+  return {
+    ...object,
+    mode,
+    remainingSeconds,
+    completedCycles,
+    isRunning: Boolean(object.isRunning),
+    lastTickAt: Date.now()
+  };
+}
+
+function getPomodoroModeSeconds(mode) {
+  return POMODORO_MODES[mode]?.seconds || POMODORO_MODES.work.seconds;
+}
+
+function formatTimer(seconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
 }
 
 function getNotebookMode(object) {
@@ -657,6 +712,177 @@ function createTodoList(object) {
   return frame;
 }
 
+
+function isPomodoroDragZone(event) {
+  if (event.target.closest(inputSelector)) return false;
+  if (event.target.closest('.pomodoro-grip')) return true;
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const edgeSize = 16;
+  return x <= edgeSize || y <= edgeSize || x >= rect.width - edgeSize || y >= rect.height - edgeSize;
+}
+
+function primePomodoroAudio() {
+  try {
+    pomodoroAudioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (pomodoroAudioContext.state === 'suspended') pomodoroAudioContext.resume();
+  } catch {
+    // Audio is best-effort and can be unavailable in restricted browsers.
+  }
+}
+
+function playPomodoroDing() {
+  try {
+    primePomodoroAudio();
+    const context = pomodoroAudioContext;
+    const now = context.currentTime;
+    const master = context.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+    master.connect(context.destination);
+
+    [660, 990].forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const toneGain = context.createGain();
+      oscillator.type = index ? 'triangle' : 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now + index * 0.08);
+      toneGain.gain.setValueAtTime(index ? 0.32 : 0.7, now);
+      toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
+      oscillator.connect(toneGain);
+      toneGain.connect(master);
+      oscillator.start(now + index * 0.08);
+      oscillator.stop(now + 1.12);
+    });
+  } catch {
+    // Browsers can block audio until the user interacts; the visual transition still runs.
+  }
+}
+
+function completePomodoroPhase(object) {
+  playPomodoroDing();
+  let mode = 'work';
+  let completedCycles = object.completedCycles || 0;
+  let message = 'Pomodoro listo para volver al trabajo';
+
+  if (object.mode === 'work') {
+    completedCycles = clamp(completedCycles + 1, 0, 4);
+    mode = completedCycles >= 4 ? 'longBreak' : 'shortBreak';
+    message = mode === 'longBreak' ? '¡Cuatro Pomodoros! Toma un descanso largo.' : 'Trabajo completado. Descanso corto iniciado.';
+  } else if (object.mode === 'longBreak') {
+    completedCycles = 0;
+    message = 'Descanso largo terminado. Ciclos reiniciados.';
+  } else {
+    message = 'Descanso corto terminado. Vuelve a Focus Mode.';
+  }
+
+  updateObject(object.id, {
+    mode,
+    completedCycles,
+    remainingSeconds: getPomodoroModeSeconds(mode),
+    isRunning: false,
+    lastTickAt: Date.now()
+  });
+  showToast(message);
+}
+
+function updatePomodoroDisplays() {
+  let hasRunningPomodoros = false;
+  let completedObject = null;
+  const now = Date.now();
+
+  state.objects.forEach((object) => {
+    if (object.type !== 'pomodoro' || object.status === 'trashed' || !object.isRunning) return;
+    hasRunningPomodoros = true;
+    const elapsed = Math.floor((now - (Number(object.lastTickAt) || now)) / 1000);
+    if (elapsed < 1 && Number(object.remainingSeconds) > 0) return;
+    const remainingSeconds = Math.max(0, (Number(object.remainingSeconds) || 0) - Math.max(0, elapsed));
+    object.remainingSeconds = remainingSeconds;
+    object.lastTickAt = now;
+    const display = document.querySelector(`[data-pomodoro-id="${object.id}"] .pomodoro-display`);
+    if (display) display.textContent = formatTimer(remainingSeconds);
+    if (remainingSeconds <= 0) completedObject = { ...object };
+  });
+
+  if (hasRunningPomodoros) persist();
+  if (completedObject) completePomodoroPhase(completedObject);
+}
+
+function ensurePomodoroTicker() {
+  window.clearInterval(pomodoroTimer);
+  updatePomodoroDisplays();
+  pomodoroTimer = window.setInterval(updatePomodoroDisplays, 1000);
+}
+
+function setPomodoroMode(id, mode) {
+  updateObject(id, {
+    mode,
+    remainingSeconds: getPomodoroModeSeconds(mode),
+    isRunning: false,
+    lastTickAt: Date.now()
+  });
+}
+
+function createPomodoroWidget(object) {
+  const frame = createFrame(object, 'pomodoro-widget', { canStart: isPomodoroDragZone });
+  frame.dataset.pomodoroId = object.id;
+
+  const shell = el('div', 'pomodoro-shell');
+  const header = el('header', 'pomodoro-grip', { title: 'Arrastra desde la barra o los bordes' });
+  header.append(el('span', 'pomodoro-status-light'), el('strong', '', { text: 'Focus Mode' }), el('span', '', { text: object.isRunning ? 'RUN' : 'READY' }));
+
+  const display = el('div', 'pomodoro-display', { text: formatTimer(object.remainingSeconds), 'aria-live': 'polite' });
+
+  const cycles = el('div', 'pomodoro-cycles', { 'aria-label': `${object.completedCycles || 0} de 4 ciclos de trabajo completados` });
+  Array.from({ length: 4 }).forEach((_, index) => {
+    cycles.append(el('span', index < (object.completedCycles || 0) ? 'is-lit' : '', { 'aria-hidden': 'true' }));
+  });
+
+  const modes = el('div', 'pomodoro-modes', { 'aria-label': 'Seleccionar modo Pomodoro' });
+  Object.entries(POMODORO_MODES).forEach(([mode, meta]) => {
+    modes.append(el('button', object.mode === mode ? 'is-active' : '', {
+      type: 'button',
+      text: `${meta.label} ${meta.minutes}`,
+      'aria-pressed': object.mode === mode ? 'true' : 'false',
+      onclick: () => setPomodoroMode(object.id, mode)
+    }));
+  });
+
+  const controls = el('div', 'pomodoro-controls');
+  const play = el('button', 'primary', {
+    type: 'button',
+    text: '▶',
+    'aria-label': 'Iniciar Pomodoro',
+    onclick: () => {
+      primePomodoroAudio();
+      updateObject(object.id, { isRunning: true, lastTickAt: Date.now() });
+    }
+  });
+  const pause = el('button', '', {
+    type: 'button',
+    text: 'Ⅱ',
+    'aria-label': 'Pausar Pomodoro',
+    onclick: () => updateObject(object.id, { isRunning: false, lastTickAt: Date.now() })
+  });
+  const reset = el('button', 'small', {
+    type: 'button',
+    text: '↺',
+    'aria-label': 'Reiniciar temporizador actual',
+    onclick: () => updateObject(object.id, {
+      remainingSeconds: getPomodoroModeSeconds(object.mode),
+      isRunning: false,
+      lastTickAt: Date.now()
+    })
+  });
+  controls.append(play, pause, reset);
+
+  shell.append(header, display, cycles, modes, controls);
+  frame.append(shell);
+  return frame;
+}
+
 function createClock() {
   window.clearInterval(clockTimer);
   const clock = el('aside', 'retro-clock', { 'aria-label': 'Reloj digital' });
@@ -669,12 +895,14 @@ function createClock() {
 function getObjectTitle(object) {
   if (object.type === 'notebook') return 'Libreta';
   if (object.type === 'todo') return 'To-Do';
+  if (object.type === 'pomodoro') return 'Pomodoro';
   return 'Sticky Note';
 }
 
 function getObjectEmoji(object) {
   if (object.type === 'notebook') return '📓';
   if (object.type === 'todo') return '☑️';
+  if (object.type === 'pomodoro') return '⏱️';
   return '🗒️';
 }
 
@@ -685,6 +913,7 @@ function getObjectExcerpt(object) {
     if (!tasks.length) return 'Lista sin tareas';
     return tasks.map((task) => `${task.done ? '✓' : '•'} ${task.text}`).join(' · ');
   }
+  if (object.type === 'pomodoro') return `${POMODORO_MODES[object.mode]?.label || 'Work'} · ${formatTimer(object.remainingSeconds)}`;
   return object.content || 'Nota sin texto';
 }
 
@@ -841,11 +1070,13 @@ function render() {
     if (object.type === 'sticky') layer.append(createStickyNote(object));
     if (object.type === 'notebook') layer.append(createNotebook(object));
     if (object.type === 'todo') layer.append(createTodoList(object));
+    if (object.type === 'pomodoro') layer.append(createPomodoroWidget(object));
   });
   main.append(layer);
   if (trashDialogOpen) main.append(createTrashDialog());
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
+  ensurePomodoroTicker();
 }
 
 render();
