@@ -1,5 +1,11 @@
 const STORAGE_KEY = 'virtualDeskState';
-const inputSelector = 'textarea, input, button, select, [contenteditable="true"]';
+const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
+const NOTEBOOK_ROTATION_LIMIT = 45;
+const NOTEBOOK_MIN_SCALE = 0.65;
+const NOTEBOOK_DEFAULT_DIMENSIONS = {
+  closed: { width: 210, height: 270 },
+  open: { width: 460, height: 430 }
+};
 
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const root = document.getElementById('root');
@@ -21,19 +27,32 @@ const defaultState = {
         'Bienvenido a VirtualDesk. Haz clic en la libreta para abrirla y escribe tus ideas.',
         'Usa las flechas para cambiar de página. Todo se guarda automáticamente.'
       ],
-      flipDirection: 'next'
+      flipDirection: 'next',
+      rotation: 0,
+      notebookScale: 1
     }
   ]
 };
 
 let state = loadState();
 
+function normalizeObject(object) {
+  if (object?.type !== 'notebook') return object;
+  return {
+    rotation: 0,
+    notebookScale: 1,
+    ...object,
+    rotation: clampNotebookRotation(object.rotation),
+    notebookScale: Math.max(NOTEBOOK_MIN_SCALE, Number(object.notebookScale) || 1)
+  };
+}
+
 function normalizeState(value) {
   return {
     ...defaultState,
     ...value,
     background: { ...defaultState.background, ...(value?.background || {}) },
-    objects: Array.isArray(value?.objects) ? value.objects : defaultState.objects
+    objects: (Array.isArray(value?.objects) ? value.objects : defaultState.objects).map(normalizeObject)
   };
 }
 
@@ -121,7 +140,7 @@ function applyBackground(main) {
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
   const buttons = [
-    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next' })],
+    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookScale: 1 })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', ...placeObject(42), content: '' })],
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', ...placeObject(76), tasks: [] })],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
@@ -158,6 +177,43 @@ function createBackgroundPanel() {
   return panel;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampNotebookRotation(value = 0) {
+  return clamp(Number(value) || 0, -NOTEBOOK_ROTATION_LIMIT, NOTEBOOK_ROTATION_LIMIT);
+}
+
+function getNotebookMode(object) {
+  return object.open ? 'open' : 'closed';
+}
+
+function getNotebookDimensions(object) {
+  const mode = getNotebookMode(object);
+  const base = NOTEBOOK_DEFAULT_DIMENSIONS[mode];
+  const scale = Number(object.notebookScale) || 1;
+  return { width: base.width * scale, height: base.height * scale, base };
+}
+
+function getFrameRotation(frame, fallback = 0) {
+  return Number(frame.dataset.displayRotation ?? frame.dataset.rotation ?? fallback) || 0;
+}
+
+function setFrameTransform(frame, x, y, rotation = getFrameRotation(frame)) {
+  frame.dataset.displayRotation = String(rotation);
+  frame.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+}
+
+function getEventPoint(event) {
+  const touch = event.touches?.[0] || event.changedTouches?.[0];
+  return touch || event;
+}
+
+function getObjectById(id, fallback) {
+  return state.objects.find((item) => item.id === id) || fallback;
+}
+
 function makeDraggable(frame, object) {
   let drag = null;
   frame.addEventListener('pointerdown', (event) => {
@@ -166,14 +222,15 @@ function makeDraggable(frame, object) {
     if (event.button !== undefined && event.button !== 0) return;
     if (event.target.closest(inputSelector)) return;
     frame.setPointerCapture?.(event.pointerId);
-    drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: object.x, originY: object.y };
+    const current = getObjectById(object.id, object);
+    drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y };
     frame.classList.add('is-dragging');
   });
   frame.addEventListener('pointermove', (event) => {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const x = Math.max(8, drag.originX + event.clientX - drag.startX);
     const y = Math.max(8, drag.originY + event.clientY - drag.startY);
-    frame.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    setFrameTransform(frame, x, y);
     updateObject(object.id, { x, y }, false);
   });
   const stop = (event) => {
@@ -190,9 +247,155 @@ function makeDraggable(frame, object) {
 
 function createFrame(object, className) {
   const frame = el('article', `desk-object ${className}`);
-  frame.style.transform = `translate3d(${object.x}px, ${object.y}px, 0)`;
+  const rotation = object.type === 'notebook' ? clampNotebookRotation(object.rotation) : 0;
+  frame.dataset.rotation = String(rotation);
+  setFrameTransform(frame, object.x, object.y, rotation);
   makeDraggable(frame, object);
   return frame;
+}
+
+function applyNotebookFrameSize(frame, object, scale = Number(object.notebookScale) || 1) {
+  const base = NOTEBOOK_DEFAULT_DIMENSIONS[getNotebookMode(object)];
+  const width = base.width * scale;
+  const height = base.height * scale;
+  frame.style.width = `${width}px`;
+  frame.style.height = `${height}px`;
+  frame.style.setProperty('--notebook-width', `${width}px`);
+  frame.style.setProperty('--notebook-height', `${height}px`);
+}
+
+function fitNotebookScaleToViewport(object, requestedScale) {
+  const current = getObjectById(object.id, object);
+  const base = NOTEBOOK_DEFAULT_DIMENSIONS[getNotebookMode(current)];
+  const radians = Math.abs(clampNotebookRotation(current.rotation)) * Math.PI / 180;
+  const rotatedWidth = base.width * Math.cos(radians) + base.height * Math.sin(radians);
+  const rotatedHeight = base.width * Math.sin(radians) + base.height * Math.cos(radians);
+  const rightLimit = (window.innerWidth - current.x - 8) * 2 / (base.width + rotatedWidth);
+  const bottomLimit = (window.innerHeight - current.y - 8) * 2 / (base.height + rotatedHeight);
+  const leftLimit = rotatedWidth > base.width ? Math.max(0, (current.x - 8) * 2 / (rotatedWidth - base.width)) : Infinity;
+  const topLimit = rotatedHeight > base.height ? Math.max(0, (current.y - 8) * 2 / (rotatedHeight - base.height)) : Infinity;
+  const maxScale = Math.max(NOTEBOOK_MIN_SCALE, Math.min(rightLimit, bottomLimit, leftLimit, topLimit));
+  return clamp(requestedScale, NOTEBOOK_MIN_SCALE, maxScale);
+}
+
+function addNotebookResize(frame, object) {
+  const handle = el('span', 'notebook-resize-control', { role: 'button', 'aria-label': 'Redimensionar libreta', 'data-no-drag': true });
+  let resize = null;
+
+  const move = (event) => {
+    if (!resize) return;
+    event.preventDefault();
+    const point = getEventPoint(event);
+    const dx = point.clientX - resize.startX;
+    const dy = point.clientY - resize.startY;
+    const aspectDelta = Math.max(dx, dy * resize.aspect);
+    const requestedScale = (resize.startWidth + aspectDelta) / resize.base.width;
+    const current = getObjectById(object.id, object);
+    const notebookScale = fitNotebookScaleToViewport(current, requestedScale);
+    applyNotebookFrameSize(frame, current, notebookScale);
+    updateObject(object.id, { notebookScale }, false);
+  };
+
+  const stop = () => {
+    if (!resize) return;
+    resize = null;
+    frame.classList.remove('is-resizing');
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', stop);
+    document.removeEventListener('touchmove', move);
+    document.removeEventListener('touchend', stop);
+    document.removeEventListener('touchcancel', stop);
+    persist();
+  };
+
+  const start = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    bringToFront(object.id, false);
+    const point = getEventPoint(event);
+    const current = getObjectById(object.id, object);
+    const { width, height, base } = getNotebookDimensions(current);
+    resize = { startX: point.clientX, startY: point.clientY, startWidth: width, aspect: width / height, base };
+    frame.classList.add('is-resizing');
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', stop);
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', stop);
+    document.addEventListener('touchcancel', stop);
+  };
+
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, { passive: false });
+  frame.append(handle);
+}
+
+function addNotebookRotation(frame, object) {
+  const handle = el('span', 'notebook-rotate-control', { role: 'button', 'aria-label': 'Rotar libreta', 'data-no-drag': true, text: '↻' });
+  let rotate = null;
+
+  const pointerAngle = (event) => {
+    const point = getEventPoint(event);
+    const rect = frame.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    return Math.atan2(point.clientY - centerY, point.clientX - centerX) * 180 / Math.PI;
+  };
+
+  const move = (event) => {
+    if (!rotate) return;
+    event.preventDefault();
+    const delta = pointerAngle(event) - rotate.startAngle;
+    const rotation = clampNotebookRotation(rotate.startRotation + delta);
+    frame.dataset.rotation = String(rotation);
+    const current = getObjectById(object.id, object);
+    setFrameTransform(frame, current.x, current.y, frame.classList.contains('is-writing') ? 0 : rotation);
+    updateObject(object.id, { rotation }, false);
+  };
+
+  const stop = () => {
+    if (!rotate) return;
+    rotate = null;
+    frame.classList.remove('is-rotating');
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', stop);
+    document.removeEventListener('touchmove', move);
+    document.removeEventListener('touchend', stop);
+    document.removeEventListener('touchcancel', stop);
+    persist();
+  };
+
+  const start = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    bringToFront(object.id, false);
+    const current = getObjectById(object.id, object);
+    rotate = { startAngle: pointerAngle(event), startRotation: clampNotebookRotation(current.rotation) };
+    frame.classList.add('is-rotating');
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', stop);
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', stop);
+    document.addEventListener('touchcancel', stop);
+  };
+
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, { passive: false });
+  frame.append(handle);
+}
+
+function addNotebookFocusRotation(frame, object, textarea) {
+  textarea.addEventListener('focus', () => {
+    frame.classList.add('is-writing');
+    const current = getObjectById(object.id, object);
+    setFrameTransform(frame, current.x, current.y, 0);
+  });
+  textarea.addEventListener('blur', () => {
+    frame.classList.remove('is-writing');
+    const current = getObjectById(object.id, object);
+    const rotation = clampNotebookRotation(current.rotation);
+    frame.dataset.rotation = String(rotation);
+    setFrameTransform(frame, current.x, current.y, rotation);
+  });
 }
 
 function createStickyNote(object) {
@@ -206,6 +409,9 @@ function createStickyNote(object) {
 
 function createNotebook(object) {
   const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'}`);
+  applyNotebookFrameSize(frame, object, fitNotebookScaleToViewport(object, Number(object.notebookScale) || 1));
+  addNotebookRotation(frame, object);
+  addNotebookResize(frame, object);
   if (!object.open) {
     const cover = el('button', 'notebook-cover', { 'aria-label': 'Abrir libreta' });
     cover.addEventListener('click', () => updateObject(object.id, { open: true }));
@@ -227,6 +433,7 @@ function createNotebook(object) {
     pages[current.activePage || 0] = event.target.value;
     return { pages };
   }, false));
+  addNotebookFocusRotation(frame, object, textarea);
   page.append(textarea);
 
   const footer = el('footer', 'page-controls');
