@@ -438,13 +438,18 @@ button {
 }
 
 .notebook-page {
+  --notebook-page-line-height: clamp(24px, calc(28px * var(--notebook-scale)), 30px);
   min-height: 0;
   margin-left: 22px;
   overflow: hidden;
   border-radius: 7px 14px 14px 7px;
   background:
     linear-gradient(90deg, rgba(180,110,110,.38) 42px, transparent 42px),
-    repeating-linear-gradient(0deg, transparent 0 27px, rgba(74,130,181,.28) 28px 29px),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 calc(var(--notebook-page-line-height) - 1px),
+      rgba(74,130,181,.28) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)
+    ),
     #fff8e7;
   box-shadow: inset 6px 0 10px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.12);
   transform-origin: left center;
@@ -466,8 +471,8 @@ button {
   color: #253044;
   background: transparent;
   font-family: "Patrick Hand", cursive;
-  font-size: clamp(9px, calc(11px * var(--notebook-scale)), 13px);
-  line-height: 1.18;
+  font-size: clamp(16px, calc(23px * var(--notebook-scale)), 24px);
+  line-height: var(--notebook-page-line-height);
 }
 
 .page-controls {
