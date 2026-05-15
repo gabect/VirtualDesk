@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
+const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
+const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
+
 const NOTEBOOK_ROTATION_LIMIT = 45;
 const NOTEBOOK_MIN_SCALE = 0.65;
 const NOTEBOOK_DEFAULT_DIMENSIONS = {
@@ -214,43 +217,128 @@ function getObjectById(id, fallback) {
   return state.objects.find((item) => item.id === id) || fallback;
 }
 
-function makeDraggable(frame, object) {
+function makeDraggable(frame, object, options = {}) {
   let drag = null;
+  let holdTimer = null;
+  const moveThreshold = options.moveThreshold ?? 0;
+  const dragDelay = options.dragDelay ?? 0;
+
+  const clearHoldTimer = () => {
+    window.clearTimeout(holdTimer);
+    holdTimer = null;
+  };
+
+  const startDrag = (event) => {
+    if (!drag || drag.isDragging) return;
+    clearHoldTimer();
+    drag.isDragging = true;
+    frame.classList.add('is-dragging');
+    if (event?.cancelable) event.preventDefault();
+  };
+
   frame.addEventListener('pointerdown', (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (options.canStart && !options.canStart(event)) return;
+    if (!options.canStart && event.target.closest(inputSelector)) return;
+
     bringToFront(object.id, false);
     frame.style.zIndex = 1000;
-    if (event.button !== undefined && event.button !== 0) return;
-    if (event.target.closest(inputSelector)) return;
     frame.setPointerCapture?.(event.pointerId);
     const current = getObjectById(object.id, object);
-    drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y };
-    frame.classList.add('is-dragging');
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: current.x,
+      originY: current.y,
+      startedAt: performance.now(),
+      isDragging: false
+    };
+
+    if (dragDelay > 0) {
+      holdTimer = window.setTimeout(() => startDrag(), dragDelay);
+    } else {
+      startDrag(event);
+    }
   });
+
   frame.addEventListener('pointermove', (event) => {
     if (!drag || drag.pointerId !== event.pointerId) return;
-    const x = Math.max(8, drag.originX + event.clientX - drag.startX);
-    const y = Math.max(8, drag.originY + event.clientY - drag.startY);
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (!drag.isDragging && distance >= moveThreshold) startDrag(event);
+    if (!drag.isDragging) return;
+
+    const x = Math.max(8, drag.originX + deltaX);
+    const y = Math.max(8, drag.originY + deltaY);
     setFrameTransform(frame, x, y);
     updateObject(object.id, { x, y }, false);
   });
+
   const stop = (event) => {
     if (!drag || drag.pointerId !== event.pointerId) return;
+    clearHoldTimer();
     frame.releasePointerCapture?.(event.pointerId);
+    const wasDragging = drag.isDragging;
+    const elapsed = performance.now() - drag.startedAt;
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
     drag = null;
     frame.classList.remove('is-dragging');
     frame.style.zIndex = '';
-    persist();
+
+    if (wasDragging) {
+      persist();
+      return;
+    }
+
+    if (options.onQuickClick && elapsed <= (options.quickClickMaxMs ?? NOTEBOOK_OPEN_CLICK_MAX_MS) && distance < moveThreshold) {
+      options.onQuickClick(event);
+    }
   };
+
   frame.addEventListener('pointerup', stop);
-  frame.addEventListener('pointercancel', stop);
+  frame.addEventListener('pointercancel', (event) => {
+    clearHoldTimer();
+    if (drag?.pointerId === event.pointerId) {
+      frame.releasePointerCapture?.(event.pointerId);
+      drag = null;
+      frame.classList.remove('is-dragging');
+      frame.style.zIndex = '';
+    }
+  });
 }
 
-function createFrame(object, className) {
+function isOpenNotebookDragZone(event) {
+  if (event.target.closest(inputSelector)) return false;
+  if (event.target.closest('.notebook-drag-zone')) return true;
+
+  const notebook = event.currentTarget;
+  const rect = notebook.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const edgeSize = Math.max(18, Math.min(rect.width, rect.height) * 0.06);
+  const bindingWidth = Math.max(34, rect.width * 0.08);
+  const topMargin = Math.max(38, rect.height * 0.1);
+
+  return (
+    x <= edgeSize ||
+    y <= edgeSize ||
+    x >= rect.width - edgeSize ||
+    y >= rect.height - edgeSize ||
+    x <= bindingWidth ||
+    y <= topMargin
+  );
+}
+
+
+function createFrame(object, className, dragOptions) {
   const frame = el('article', `desk-object ${className}`);
   const rotation = object.type === 'notebook' ? clampNotebookRotation(object.rotation) : 0;
   frame.dataset.rotation = String(rotation);
   setFrameTransform(frame, object.x, object.y, rotation);
-  makeDraggable(frame, object);
+  makeDraggable(frame, object, dragOptions);
   return frame;
 }
 
@@ -408,20 +496,32 @@ function createStickyNote(object) {
 }
 
 function createNotebook(object) {
-  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'}`);
+  const dragOptions = object.open
+    ? { canStart: isOpenNotebookDragZone, moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD }
+    : {
+        canStart: (event) => !event.target.closest('[data-no-drag]'),
+        dragDelay: NOTEBOOK_OPEN_CLICK_MAX_MS,
+        moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD,
+        onQuickClick: () => updateObject(object.id, { open: true })
+      };
+  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'}`, dragOptions);
   applyNotebookFrameSize(frame, object, fitNotebookScaleToViewport(object, Number(object.notebookScale) || 1));
   addNotebookRotation(frame, object);
   addNotebookResize(frame, object);
   if (!object.open) {
-    const cover = el('button', 'notebook-cover', { 'aria-label': 'Abrir libreta' });
-    cover.addEventListener('click', () => updateObject(object.id, { open: true }));
+    const cover = el('div', 'notebook-cover', { role: 'button', tabindex: '0', 'aria-label': 'Abrir libreta' });
+    cover.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      updateObject(object.id, { open: true });
+    });
     cover.append(el('span', 'spiral'), el('span', 'cover-title', { text: 'Notebook' }), el('span', 'cover-subtitle', { text: 'click to open' }));
     frame.append(cover);
     return frame;
   }
 
   const wrap = el('div', 'notebook-open');
-  const toolbar = el('header', 'notebook-toolbar');
+  const toolbar = el('header', 'notebook-toolbar notebook-drag-zone', { title: 'Arrastra desde este margen superior para mover la libreta' });
   const close = el('button', '', { text: 'Cerrar', onclick: () => updateObject(object.id, { open: false }) });
   toolbar.append(close, el('span', '', { text: `Página ${(object.activePage || 0) + 1} / ${(object.pages || ['']).length}` }));
 
