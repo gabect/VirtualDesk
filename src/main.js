@@ -15,6 +15,7 @@ const root = document.getElementById('root');
 let saveTimer = null;
 let toastTimer = null;
 let clockTimer = null;
+let trashDialogOpen = false;
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -22,6 +23,7 @@ const defaultState = {
     {
       id: 'welcome-notebook',
       type: 'notebook',
+      status: 'active',
       x: 170,
       y: 92,
       open: false,
@@ -40,13 +42,14 @@ const defaultState = {
 let state = loadState();
 
 function normalizeObject(object) {
-  if (object?.type !== 'notebook') return object;
+  const baseObject = { status: 'active', ...object };
+  if (baseObject?.type !== 'notebook') return baseObject;
   return {
     rotation: 0,
     notebookScale: 1,
-    ...object,
-    rotation: clampNotebookRotation(object.rotation),
-    notebookScale: Math.max(NOTEBOOK_MIN_SCALE, Number(object.notebookScale) || 1)
+    ...baseObject,
+    rotation: clampNotebookRotation(baseObject.rotation),
+    notebookScale: Math.max(NOTEBOOK_MIN_SCALE, Number(baseObject.notebookScale) || 1)
   };
 }
 
@@ -143,9 +146,9 @@ function applyBackground(main) {
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
   const buttons = [
-    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookScale: 1 })],
-    ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', ...placeObject(42), content: '' })],
-    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', ...placeObject(76), tasks: [] })],
+    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookScale: 1 })],
+    ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
+    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
@@ -217,6 +220,59 @@ function getObjectById(id, fallback) {
   return state.objects.find((item) => item.id === id) || fallback;
 }
 
+function getActiveObjects() {
+  return state.objects.filter((object) => object.status !== 'trashed');
+}
+
+function getTrashedObjects() {
+  return state.objects.filter((object) => object.status === 'trashed');
+}
+
+function getTrashButton() {
+  return document.querySelector('.trash-can');
+}
+
+function isPointInsideRect(x, y, rect) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function isPointOverTrash(x, y) {
+  const trash = getTrashButton();
+  return trash ? isPointInsideRect(x, y, trash.getBoundingClientRect()) : false;
+}
+
+function setTrashDropFeedback(active) {
+  const trash = getTrashButton();
+  if (trash) trash.classList.toggle('is-drop-target', active);
+}
+
+function shakeTrashCan() {
+  const trash = getTrashButton();
+  if (!trash) return;
+  trash.classList.remove('just-ate');
+  void trash.offsetWidth;
+  trash.classList.add('just-ate');
+}
+
+function trashObjectWithAnimation(frame, object, point) {
+  setTrashDropFeedback(false);
+  const trash = getTrashButton();
+  const frameRect = frame.getBoundingClientRect();
+  const trashRect = trash?.getBoundingClientRect();
+  const targetX = trashRect ? trashRect.left + (trashRect.width - frameRect.width) / 2 : point.clientX - frameRect.width / 2;
+  const targetY = trashRect ? trashRect.top + (trashRect.height - frameRect.height) / 2 : point.clientY - frameRect.height / 2;
+
+  frame.classList.add('is-being-trashed');
+  frame.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0) rotate(720deg)`;
+  frame.style.opacity = '0';
+
+  window.setTimeout(() => {
+    updateObject(object.id, { status: 'trashed', trashedAt: Date.now(), open: object.type === 'notebook' ? false : object.open }, true);
+    shakeTrashCan();
+    showToast('Objeto enviado a la Papelera');
+  }, 420);
+}
+
 function makeDraggable(frame, object, options = {}) {
   let drag = null;
   let holdTimer = null;
@@ -275,6 +331,7 @@ function makeDraggable(frame, object, options = {}) {
     const y = Math.max(8, drag.originY + deltaY);
     setFrameTransform(frame, x, y);
     updateObject(object.id, { x, y }, false);
+    setTrashDropFeedback(object.status !== 'trashed' && isPointOverTrash(event.clientX, event.clientY));
   });
 
   const stop = (event) => {
@@ -284,9 +341,17 @@ function makeDraggable(frame, object, options = {}) {
     const wasDragging = drag.isDragging;
     const elapsed = performance.now() - drag.startedAt;
     const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    const droppedOnTrash = wasDragging && object.status !== 'trashed' && isPointOverTrash(event.clientX, event.clientY);
     drag = null;
     frame.classList.remove('is-dragging');
     frame.style.zIndex = '';
+
+    if (droppedOnTrash) {
+      trashObjectWithAnimation(frame, object, event);
+      return;
+    }
+
+    setTrashDropFeedback(false);
 
     if (wasDragging) {
       persist();
@@ -306,6 +371,7 @@ function makeDraggable(frame, object, options = {}) {
       drag = null;
       frame.classList.remove('is-dragging');
       frame.style.zIndex = '';
+      setTrashDropFeedback(false);
     }
   });
 }
@@ -600,6 +666,145 @@ function createClock() {
   return clock;
 }
 
+function getObjectTitle(object) {
+  if (object.type === 'notebook') return 'Libreta';
+  if (object.type === 'todo') return 'To-Do';
+  return 'Sticky Note';
+}
+
+function getObjectEmoji(object) {
+  if (object.type === 'notebook') return '📓';
+  if (object.type === 'todo') return '☑️';
+  return '🗒️';
+}
+
+function getObjectExcerpt(object) {
+  if (object.type === 'notebook') return (object.pages || [''])[0] || 'Libreta sin texto';
+  if (object.type === 'todo') {
+    const tasks = object.tasks || [];
+    if (!tasks.length) return 'Lista sin tareas';
+    return tasks.map((task) => `${task.done ? '✓' : '•'} ${task.text}`).join(' · ');
+  }
+  return object.content || 'Nota sin texto';
+}
+
+function createTrashPreview(object) {
+  const preview = el('article', `trash-preview ${object.type}`, { tabindex: '0', role: 'button', 'aria-label': `Restaurar ${getObjectTitle(object)} arrastrando al escritorio` });
+  preview.dataset.objectId = object.id;
+  preview.append(
+    el('span', 'trash-preview-icon', { text: getObjectEmoji(object) }),
+    el('strong', '', { text: getObjectTitle(object) }),
+    el('p', '', { text: getObjectExcerpt(object) })
+  );
+  makeTrashPreviewDraggable(preview, object);
+  return preview;
+}
+
+function makeTrashPreviewDraggable(preview, object) {
+  let restoreDrag = null;
+
+  const cleanup = () => {
+    restoreDrag?.ghost.remove();
+    restoreDrag = null;
+    document.body.classList.remove('is-restoring-from-trash');
+  };
+
+  preview.addEventListener('pointerdown', (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    preview.setPointerCapture?.(event.pointerId);
+    const rect = preview.getBoundingClientRect();
+    const ghost = preview.cloneNode(true);
+    ghost.classList.add('trash-restore-ghost');
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.top = `${rect.top}px`;
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.height = `${rect.height}px`;
+    document.body.append(ghost);
+    document.body.classList.add('is-restoring-from-trash');
+    restoreDrag = {
+      pointerId: event.pointerId,
+      ghost,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    };
+  });
+
+  preview.addEventListener('pointermove', (event) => {
+    if (!restoreDrag || restoreDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    restoreDrag.ghost.style.left = `${event.clientX - restoreDrag.offsetX}px`;
+    restoreDrag.ghost.style.top = `${event.clientY - restoreDrag.offsetY}px`;
+  });
+
+  preview.addEventListener('pointerup', (event) => {
+    if (!restoreDrag || restoreDrag.pointerId !== event.pointerId) return;
+    preview.releasePointerCapture?.(event.pointerId);
+    const desk = document.querySelector('.virtual-desk');
+    const dialog = document.querySelector('.trash-dialog');
+    const deskRect = desk?.getBoundingClientRect();
+    const dialogRect = dialog?.getBoundingClientRect();
+    const onDesk = deskRect && isPointInsideRect(event.clientX, event.clientY, deskRect);
+    const outsideDialog = !dialogRect || !isPointInsideRect(event.clientX, event.clientY, dialogRect);
+    const x = Math.max(8, event.clientX - restoreDrag.offsetX);
+    const y = Math.max(8, event.clientY - restoreDrag.offsetY);
+    cleanup();
+
+    if (onDesk && outsideDialog) {
+      updateObject(object.id, { status: 'active', x, y, restoredAt: Date.now() }, true);
+      showToast('Objeto restaurado al escritorio');
+      return;
+    }
+
+    showToast('Arrastra fuera de la ventana para restaurar');
+  });
+
+  preview.addEventListener('pointercancel', cleanup);
+}
+
+function createTrashCan() {
+  const trashedCount = getTrashedObjects().length;
+  const button = el('button', `trash-can ${trashedCount ? 'is-full' : 'is-empty'}`, {
+    type: 'button',
+    title: 'Abrir Papelera',
+    'aria-label': `Papelera de reciclaje ${trashedCount ? `con ${trashedCount} objeto${trashedCount === 1 ? '' : 's'}` : 'vacía'}`,
+    onclick: () => {
+      trashDialogOpen = true;
+      render();
+    }
+  });
+  button.append(el('span', 'trash-lid'), el('span', 'trash-body'), el('span', 'trash-papers'));
+  return button;
+}
+
+function createTrashDialog() {
+  const overlay = el('section', 'trash-overlay', { 'aria-label': 'Contenido de la Papelera' });
+  const dialog = el('div', 'trash-dialog', { role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'trash-title' });
+  const header = el('header', 'trash-dialog-header');
+  header.append(
+    el('div', '', { html: '<h2 id="trash-title">Papelera de Reciclaje</h2><p>Arrastra cualquier elemento fuera de esta ventana y suéltalo en el escritorio para restaurarlo.</p>' }),
+    el('button', 'trash-close', { type: 'button', text: '×', 'aria-label': 'Cerrar Papelera', onclick: () => { trashDialogOpen = false; render(); } })
+  );
+
+  const trashedObjects = getTrashedObjects();
+  const content = el('div', `trash-grid ${trashedObjects.length ? '' : 'is-empty'}`);
+  if (trashedObjects.length) {
+    trashedObjects.forEach((object) => content.append(createTrashPreview(object)));
+  } else {
+    content.append(el('p', 'trash-empty-message', { text: 'La Papelera está vacía. Los objetos eliminados aparecerán aquí.' }));
+  }
+
+  dialog.append(header, content);
+  overlay.append(dialog);
+  overlay.addEventListener('pointerdown', (event) => {
+    if (event.target === overlay) {
+      trashDialogOpen = false;
+      render();
+    }
+  });
+  return overlay;
+}
+
 function createCalendar() {
   const today = new Date();
   const year = today.getFullYear();
@@ -625,19 +830,21 @@ function render() {
   root.replaceChildren();
   const main = el('main', 'virtual-desk');
   applyBackground(main);
-  main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel());
+  main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
   const widgets = el('section', 'fixed-widgets');
   widgets.append(createClock(), createCalendar());
   main.append(widgets);
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
-  state.objects.forEach((object) => {
+  getActiveObjects().forEach((object) => {
     if (object.type === 'sticky') layer.append(createStickyNote(object));
     if (object.type === 'notebook') layer.append(createNotebook(object));
     if (object.type === 'todo') layer.append(createTodoList(object));
   });
-  main.append(layer, el('div', 'toast', { role: 'status', hidden: true }));
+  main.append(layer);
+  if (trashDialogOpen) main.append(createTrashDialog());
+  main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
 }
 
