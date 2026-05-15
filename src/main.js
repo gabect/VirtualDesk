@@ -342,6 +342,7 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
+    ['google-login-icon', activeUser ? '☁️' : 'G', activeUser ? 'Cerrar sesión de Google' : 'Iniciar sesión con Google', handleGoogleAuth],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
