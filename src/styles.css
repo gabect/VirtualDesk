@@ -313,6 +313,7 @@ button {
 .notebook {
   --notebook-width: 210px;
   --notebook-height: 270px;
+  --notebook-scale: 1;
   transform-origin: center center;
   transition: transform .34s cubic-bezier(.2, .8, .2, 1), filter .18s ease;
 }
@@ -369,14 +370,15 @@ button {
 .cover-title {
   margin-top: 86px;
   font-family: Georgia, serif;
-  font-size: 31px;
+  font-size: calc(31px * var(--notebook-scale));
   font-weight: 800;
 }
 
 .cover-subtitle {
   margin-top: 16px;
   opacity: .7;
-  letter-spacing: 1px;
+  font-size: calc(13px * var(--notebook-scale));
+  letter-spacing: calc(1px * var(--notebook-scale));
   text-transform: uppercase;
 }
 
@@ -436,13 +438,18 @@ button {
 }
 
 .notebook-page {
+  --notebook-page-line-height: clamp(24px, calc(28px * var(--notebook-scale)), 30px);
   min-height: 0;
   margin-left: 22px;
   overflow: hidden;
   border-radius: 7px 14px 14px 7px;
   background:
     linear-gradient(90deg, rgba(180,110,110,.38) 42px, transparent 42px),
-    repeating-linear-gradient(0deg, transparent 0 27px, rgba(74,130,181,.28) 28px 29px),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 calc(var(--notebook-page-line-height) - 1px),
+      rgba(74,130,181,.28) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)
+    ),
     #fff8e7;
   box-shadow: inset 6px 0 10px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.12);
   transform-origin: left center;
@@ -464,8 +471,8 @@ button {
   color: #253044;
   background: transparent;
   font-family: "Patrick Hand", cursive;
-  font-size: 23px;
-  line-height: 1.18;
+  font-size: clamp(16px, calc(23px * var(--notebook-scale)), 24px);
+  line-height: var(--notebook-page-line-height);
 }
 
 .page-controls {
@@ -684,7 +691,4 @@ button {
     width: min(270px, calc(100vw - 24px));
   }
 
-  .notebook-page textarea {
-    font-size: 21px;
-  }
 }
