@@ -190,9 +190,8 @@ async function persistCloudState({ force = false } = {}) {
     await Promise.all(writes);
     lastCloudWidgetIds = nextIds;
   } catch (error) {
-    console.error('No se pudo sincronizar con Firestore', error);
+    showFirebaseError('Firestore error', error);
     saveLocalState();
-    showToast('Guardado localmente (Sin conexión)');
   }
 }
 
@@ -220,9 +219,8 @@ async function loadCloudState(user) {
     state = normalizeState(snapshot.empty ? structuredClone(defaultState) : { background, objects });
     if (snapshot.empty) await persistCloudState({ force: true });
   } catch (error) {
-    console.error('No se pudo cargar Firestore', error);
+    showFirebaseError('Firestore error', error);
     state = loadState();
-    showToast('Guardado localmente (Sin conexión)');
   } finally {
     cloudLoading = false;
     render();
@@ -285,11 +283,11 @@ function placeObject(offset = 0) {
   return { x: Math.min(window.innerWidth - 280, 132 + offset), y: 96 + offset };
 }
 
-function showAuthErrorToast(error) {
-  const code = error?.code || 'auth/unknown';
-  const message = error?.message || 'Error desconocido de Firebase Authentication';
-  console.error('Auth error:', code, message, error);
-  showToast('Auth error: ' + code);
+function showFirebaseError(label, error) {
+  const code = error?.code || 'unknown';
+  const message = error?.message || 'Unknown Firebase error';
+  console.error(label + ':', code, message, error);
+  showToast(label + ': ' + code);
 }
 
 function showToast(message) {
@@ -321,8 +319,7 @@ function handleGoogleSignOut() {
   }
 
   firebaseApi.signOut(auth).catch((error) => {
-    console.error('No se pudo cerrar sesión', error);
-    showToast('No se pudo cerrar sesión');
+    showFirebaseError('Auth error', error);
   });
 }
 
@@ -337,9 +334,9 @@ function handleGoogleAuth() {
     return;
   }
 
-  showToast('Opening Google sign-in...');
-  firebaseApi.signInWithPopup(auth, googleProvider).catch((error) => {
-    showAuthErrorToast(error);
+  showToast('Starting Google sign-in...');
+  firebaseApi.signInWithRedirect(auth, googleProvider).catch((error) => {
+    showFirebaseError('Auth error', error);
   });
 }
 
@@ -1488,7 +1485,8 @@ async function initializeFirebaseInBackground() {
     db = firestoreModule.getFirestore(firebaseApp);
     googleProvider = new authModule.GoogleAuthProvider();
     firebaseApi = {
-      signInWithPopup: authModule.signInWithPopup,
+      signInWithRedirect: authModule.signInWithRedirect,
+      getRedirectResult: authModule.getRedirectResult,
       onAuthStateChanged: authModule.onAuthStateChanged,
       signOut: authModule.signOut,
       collection: firestoreModule.collection,
@@ -1498,6 +1496,10 @@ async function initializeFirebaseInBackground() {
       deleteDoc: firestoreModule.deleteDoc
     };
 
+
+    await firebaseApi.getRedirectResult(auth).catch((error) => {
+      showFirebaseError('Redirect error', error);
+    });
 
     firebaseApi.onAuthStateChanged(auth, async (user) => {
       activeUser = user;
