@@ -1,16 +1,4 @@
-// For GitHub Pages auth, add gabect.github.io in Firebase Authentication > Settings > Authorized domains.
-const firebaseConfig = {
-  apiKey: "AIzaSyDNRvnqj1tWfJKw4CWJkmSw_dlYbVCZ7VI",
-  authDomain: "virtual-desk-b47de.firebaseapp.com",
-  projectId: "virtual-desk-b47de",
-  storageBucket: "virtual-desk-b47de.firebasestorage.app",
-  messagingSenderId: "937317414102",
-  appId: "1:937317414102:web:ef642de1dbfc78d33e0577",
-  measurementId: "G-RR8R3J5KGE"
-};
-
 const STORAGE_KEY = 'virtualDeskState';
-const DESK_SETTINGS_WIDGET_ID = '__desk-settings__';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
 const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
@@ -53,11 +41,6 @@ const DEFAULT_FOCUS_STATION = 'lofi';
 
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 let root = null;
-let auth = null;
-let db = null;
-let googleProvider = null;
-let firebaseInitStarted = false;
-let firebaseApi = null;
 let saveTimer = null;
 let toastTimer = null;
 let pendingToastMessage = '';
@@ -66,10 +49,6 @@ let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
-let activeUser = null;
-let authReady = false;
-let cloudLoading = false;
-let lastCloudWidgetIds = new Set();
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -140,101 +119,7 @@ function saveLocalState() {
 
 function persist() {
   window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => {
-    if (activeUser) {
-      persistCloudState();
-      return;
-    }
-
-    saveLocalState();
-  }, 60);
-}
-
-function getWidgetsCollectionRef(uid = activeUser?.uid) {
-  if (!uid || !db || !firebaseApi) return null;
-  return firebaseApi.collection(db, 'users', uid, 'widgets');
-}
-
-function getDeskSettingsDocument() {
-  return {
-    id: DESK_SETTINGS_WIDGET_ID,
-    type: 'deskSettings',
-    background: state.background
-  };
-}
-
-function isDeskSettingsDocument(data) {
-  return data?.id === DESK_SETTINGS_WIDGET_ID || data?.type === 'deskSettings';
-}
-
-async function persistCloudState({ force = false } = {}) {
-  if (!activeUser || (cloudLoading && !force)) return;
-  const widgetsRef = getWidgetsCollectionRef();
-  if (!widgetsRef || !firebaseApi) {
-    saveLocalState();
-    return;
-  }
-  const { doc, setDoc, deleteDoc } = firebaseApi;
-  const nextIds = new Set([DESK_SETTINGS_WIDGET_ID, ...state.objects.map((object) => object.id)]);
-
-  try {
-    const writes = [
-      setDoc(doc(widgetsRef, DESK_SETTINGS_WIDGET_ID), getDeskSettingsDocument()),
-      ...state.objects.map((object) => setDoc(doc(widgetsRef, object.id), { ...object }))
-    ];
-
-    lastCloudWidgetIds.forEach((id) => {
-      if (!nextIds.has(id)) writes.push(deleteDoc(doc(widgetsRef, id)));
-    });
-
-    await Promise.all(writes);
-    lastCloudWidgetIds = nextIds;
-  } catch (error) {
-    showFirebaseError('Firestore error', error);
-    saveLocalState();
-  }
-}
-
-async function loadCloudState(user) {
-  cloudLoading = true;
-  try {
-    const widgetsRef = getWidgetsCollectionRef(user.uid);
-    if (!widgetsRef || !firebaseApi) throw new Error('Firebase no está disponible');
-    const snapshot = await firebaseApi.getDocs(widgetsRef);
-    let background = defaultState.background;
-    const objects = [];
-    const cloudIds = new Set();
-
-    snapshot.forEach((item) => {
-      const data = item.data();
-      cloudIds.add(item.id);
-      if (isDeskSettingsDocument(data)) {
-        background = { ...defaultState.background, ...(data.background || {}) };
-        return;
-      }
-      objects.push({ id: item.id, ...data });
-    });
-
-    lastCloudWidgetIds = cloudIds;
-    state = normalizeState(snapshot.empty ? structuredClone(defaultState) : { background, objects });
-    if (snapshot.empty) await persistCloudState({ force: true });
-  } catch (error) {
-    showFirebaseError('Firestore error', error);
-    state = loadState();
-  } finally {
-    cloudLoading = false;
-    render();
-  }
-}
-
-function getSyncStatusLabel() {
-  if (!authReady || cloudLoading) return 'Conectando...';
-  return activeUser ? 'Sincronizado' : 'Modo Invitado';
-}
-
-function getSyncStatusDetail() {
-  if (!authReady || cloudLoading) return 'Verificando sesión';
-  return activeUser ? (activeUser.displayName || activeUser.email || 'Google') : 'Guardado local';
+  saveTimer = window.setTimeout(saveLocalState, 60);
 }
 
 function setState(updater, shouldRender = true) {
@@ -283,13 +168,6 @@ function placeObject(offset = 0) {
   return { x: Math.min(window.innerWidth - 280, 132 + offset), y: 96 + offset };
 }
 
-function showFirebaseError(label, error) {
-  const code = error?.code || 'unknown';
-  const message = error?.message || 'Unknown Firebase error';
-  console.error(label + ':', code, message, error);
-  showToast(label + ': ' + code);
-}
-
 function showToast(message) {
   const toast = document.querySelector('.toast');
   if (!toast) {
@@ -312,34 +190,6 @@ function applyBackground(main) {
   }
 }
 
-function handleGoogleSignOut() {
-  if (!auth || !firebaseApi) {
-    showToast('Google no está disponible todavía');
-    return;
-  }
-
-  firebaseApi.signOut(auth).catch((error) => {
-    showFirebaseError('Auth error', error);
-  });
-}
-
-function handleGoogleAuth() {
-  if (!auth || !googleProvider || !firebaseApi) {
-    showToast('Google no está disponible todavía');
-    return;
-  }
-
-  if (activeUser) {
-    handleGoogleSignOut();
-    return;
-  }
-
-  showToast('Starting Google sign-in...');
-  firebaseApi.signInWithRedirect(auth, googleProvider).catch((error) => {
-    showFirebaseError('Auth error', error);
-  });
-}
-
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
   const buttons = [
@@ -348,7 +198,6 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['google-login-icon', activeUser ? '☁️' : 'G', activeUser ? 'Cerrar sesión de Google' : 'Iniciar sesión con Google', handleGoogleAuth],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
@@ -1145,7 +994,7 @@ function updateFocusPlaybackState(id, isPlaying) {
   playButton.setAttribute('aria-label', isPlaying ? 'Pausar música de enfoque' : 'Reproducir música de enfoque');
 }
 
-function syncFocusAudio(audio, object) {
+function updateFocusAudioSource(audio, object) {
   const track = getFocusTrack(object);
   audio.volume = object.volume;
   if (audio.dataset.src !== track.url) {
@@ -1203,7 +1052,7 @@ function createFocusPlayerWidget(object) {
   display.append(marquee, el('div', 'focus-player-time', { text: '00:00 / --:--', 'aria-live': 'polite' }));
 
   const audio = el('audio', '', { preload: 'metadata' });
-  syncFocusAudio(audio, object);
+  updateFocusAudioSource(audio, object);
   audio.addEventListener('loadedmetadata', () => updateFocusTimeDisplay(object.id, audio.currentTime, audio.duration));
   audio.addEventListener('timeupdate', () => updateFocusTimeDisplay(object.id, audio.currentTime, audio.duration));
   audio.addEventListener('play', () => updateFocusPlaybackState(object.id, true));
@@ -1252,14 +1101,14 @@ function createFocusPlayerWidget(object) {
   return frame;
 }
 
-function createSyncIndicator() {
-  const indicator = el('aside', `sync-indicator ${activeUser ? 'is-online' : 'is-guest'}`, {
+function createLocalModeIndicator() {
+  const indicator = el('aside', 'local-mode-indicator', {
     'aria-live': 'polite',
-    'aria-label': `Estado de sincronización: ${getSyncStatusLabel()}`
+    'aria-label': 'Local Mode: Saved on this device'
   });
   const copy = el('div');
-  copy.append(el('strong', '', { text: getSyncStatusLabel() }), el('small', '', { text: getSyncStatusDetail() }));
-  indicator.append(el('span', 'sync-dot', { 'aria-hidden': 'true' }), copy);
+  copy.append(el('strong', '', { text: 'Local Mode' }), el('small', '', { text: 'Saved on this device' }));
+  indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy);
   return indicator;
 }
 
@@ -1446,7 +1295,7 @@ function render() {
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
   const widgets = el('section', 'fixed-widgets');
-  widgets.append(createSyncIndicator(), createClock(), createCalendar());
+  widgets.append(createLocalModeIndicator(), createClock(), createCalendar());
   main.append(widgets);
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
@@ -1469,68 +1318,11 @@ function render() {
   }
 }
 
-async function initializeFirebaseInBackground() {
-  if (firebaseInitStarted) return;
-  firebaseInitStarted = true;
-
-  try {
-    const [appModule, authModule, firestoreModule] = await Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js')
-    ]);
-
-    const firebaseApp = appModule.initializeApp(firebaseConfig);
-    auth = authModule.getAuth(firebaseApp);
-    db = firestoreModule.getFirestore(firebaseApp);
-    googleProvider = new authModule.GoogleAuthProvider();
-    firebaseApi = {
-      signInWithRedirect: authModule.signInWithRedirect,
-      getRedirectResult: authModule.getRedirectResult,
-      onAuthStateChanged: authModule.onAuthStateChanged,
-      signOut: authModule.signOut,
-      collection: firestoreModule.collection,
-      doc: firestoreModule.doc,
-      setDoc: firestoreModule.setDoc,
-      getDocs: firestoreModule.getDocs,
-      deleteDoc: firestoreModule.deleteDoc
-    };
-
-
-    await firebaseApi.getRedirectResult(auth).catch((error) => {
-      showFirebaseError('Redirect error', error);
-    });
-
-    firebaseApi.onAuthStateChanged(auth, async (user) => {
-      activeUser = user;
-      authReady = true;
-      lastCloudWidgetIds = new Set();
-
-      if (user) {
-        await loadCloudState(user);
-        showToast('Escritorio sincronizado con Google');
-        return;
-      }
-
-      state = loadState();
-      render();
-    });
-  } catch (error) {
-    console.error('Firebase no se pudo inicializar; la UI seguirá en modo invitado.', error);
-    activeUser = null;
-    authReady = true;
-    cloudLoading = false;
-    render();
-    showToast('Modo Invitado: Firebase no disponible');
-  }
-}
-
 function bootVirtualDesk() {
   root = document.getElementById('root');
   if (!root) return;
 
   render();
-  initializeFirebaseInBackground();
 }
 
 if (document.readyState === 'loading') {
