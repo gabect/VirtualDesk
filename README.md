@@ -27,6 +27,19 @@ Abre http://localhost:5173/ para usar la aplicación.
 npm run build
 ```
 
+
+## Despliegue en Firebase Hosting
+
+El proyecto incluye `firebase.json` y `.firebaserc` configurados para publicar la aplicación estática desde la raíz del repositorio en el proyecto Firebase `virtual-desk-b47de`.
+
+```bash
+firebase login
+firebase init hosting
+firebase deploy --only hosting
+```
+
+Durante `firebase init hosting`, conserva `.` como directorio público y evita sobrescribir `index.html` para mantener la aplicación existente.
+
 ## Persistencia
 
 La aplicación guarda automáticamente el estado completo del escritorio en `localStorage` usando la clave `virtualDeskState`. El estado incluye:
