@@ -285,11 +285,11 @@ function placeObject(offset = 0) {
   return { x: Math.min(window.innerWidth - 280, 132 + offset), y: 96 + offset };
 }
 
-function showAuthErrorToast(action, error) {
+function showAuthErrorToast(error) {
   const code = error?.code || 'auth/unknown';
   const message = error?.message || 'Error desconocido de Firebase Authentication';
-  console.error(`${action}: ${code} - ${message}`, { code, message, error });
-  showToast(`${action}: ${code} - ${message}`);
+  console.error('Auth error:', code, message, error);
+  showToast('Auth error: ' + code);
 }
 
 function showToast(message) {
@@ -337,8 +337,9 @@ function handleGoogleAuth() {
     return;
   }
 
-  firebaseApi.signInWithRedirect(auth, googleProvider).catch((error) => {
-    showAuthErrorToast('No se pudo iniciar sesión con Google', error);
+  showToast('Opening Google sign-in...');
+  firebaseApi.signInWithPopup(auth, googleProvider).catch((error) => {
+    showAuthErrorToast(error);
   });
 }
 
@@ -1487,8 +1488,7 @@ async function initializeFirebaseInBackground() {
     db = firestoreModule.getFirestore(firebaseApp);
     googleProvider = new authModule.GoogleAuthProvider();
     firebaseApi = {
-      signInWithRedirect: authModule.signInWithRedirect,
-      getRedirectResult: authModule.getRedirectResult,
+      signInWithPopup: authModule.signInWithPopup,
       onAuthStateChanged: authModule.onAuthStateChanged,
       signOut: authModule.signOut,
       collection: firestoreModule.collection,
@@ -1498,14 +1498,6 @@ async function initializeFirebaseInBackground() {
       deleteDoc: firestoreModule.deleteDoc
     };
 
-    firebaseApi.getRedirectResult(auth).then((result) => {
-      if (result) {
-        console.log('Inicio de sesión exitoso por redirección', result.user);
-        showToast('Sincronizando...');
-      }
-    }).catch((error) => {
-      showAuthErrorToast('Error en la redirección de Auth', error);
-    });
 
     firebaseApi.onAuthStateChanged(auth, async (user) => {
       activeUser = user;
