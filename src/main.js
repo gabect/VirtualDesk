@@ -1130,12 +1130,14 @@ function createFocusPlayerWidget(object) {
 
 
 function getAuthDisplayName(user) {
-  return user?.displayName || user?.email || 'Google account';
+  return user?.email || user?.displayName || 'Google account';
 }
 
 async function handleGoogleLogin() {
+  console.log("Starting Google redirect sign-in");
   await signInWithRedirect(auth, googleProvider).catch((error) => {
-    showToast(error?.message || 'Google login could not start');
+    console.error("Auth error:", error.code, error.message, error);
+    showToast("Auth error: " + (error.code || "unknown"));
   });
 }
 
@@ -1151,26 +1153,33 @@ function startFirebaseAuth() {
   if (firebaseAuthStarted) return;
   firebaseAuthStarted = true;
 
-  getRedirectResult(auth)
-    .then((result) => {
-      if (result?.user) showToast(`Signed in as ${getAuthDisplayName(result.user)}`);
-    })
-    .catch((error) => {
-      showToast(error?.message || 'Google login did not finish');
-    });
-
   onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("Auth state user:", user.uid, user.email);
+    } else {
+      console.log("Auth state: no user");
+    }
     authUser = user;
     authReady = true;
     render();
   });
+
+  getRedirectResult(auth)
+    .then((result) => {
+      console.log("Redirect result:", result?.user?.uid || "no redirect user");
+      if (result?.user) showToast(`Signed in as ${getAuthDisplayName(result.user)}`);
+    })
+    .catch((error) => {
+      console.error("Redirect error:", error.code, error.message, error);
+      showToast("Redirect error: " + (error.code || "unknown"));
+    });
 }
 
 function createLocalModeIndicator() {
   const signedIn = Boolean(authUser);
   const statusText = signedIn
-    ? `Google: ${getAuthDisplayName(authUser)}`
-    : authReady ? 'Saved locally. Google login available.' : 'Saved locally. Checking Google login...';
+    ? getAuthDisplayName(authUser)
+    : 'Saved locally. Google login available.';
   const indicator = el('aside', 'local-mode-indicator', {
     'aria-live': 'polite',
     'aria-label': signedIn ? `Google login active: ${getAuthDisplayName(authUser)}` : 'Local Mode: Saved on this device'
