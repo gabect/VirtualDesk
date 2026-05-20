@@ -1,4 +1,8 @@
-const STORAGE_KEY = 'virtualDeskState';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
 const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
@@ -41,7 +45,6 @@ const DEFAULT_FOCUS_STATION = 'lofi';
 
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 let root = null;
-let saveTimer = null;
 let toastTimer = null;
 let pendingToastMessage = '';
 let clockTimer = null;
@@ -49,6 +52,24 @@ let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
+let cloudSaveTimer = null;
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
+  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
+  projectId: 'virtual-desk-2e8a1',
+  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
+  messagingSenderId: '1075800179675',
+  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
+  measurementId: 'G-YMM74MBCGW'
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+if (typeof window !== 'undefined') getAnalytics(firebaseApp);
+const firebaseAuth = getAuth(firebaseApp);
+const firestoreDb = getFirestore(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
+let currentUser = null;
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -73,7 +94,7 @@ const defaultState = {
   ]
 };
 
-let state = loadState();
+let state = structuredClone(defaultState);
 
 function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
@@ -104,22 +125,36 @@ function normalizeState(value) {
   };
 }
 
-function loadState() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? normalizeState(JSON.parse(saved)) : structuredClone(defaultState);
-  } catch {
-    return structuredClone(defaultState);
-  }
-}
-
-function saveLocalState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
 
 function persist() {
-  window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(saveLocalState, 60);
+  scheduleCloudSave();
+}
+
+function getUserStateRef(uid) {
+  return doc(firestoreDb, 'users', uid, 'desk', 'state');
+}
+
+function scheduleCloudSave() {
+  if (!currentUser) return;
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = window.setTimeout(async () => {
+    if (!currentUser) return;
+    await setDoc(getUserStateRef(currentUser.uid), {
+      state,
+      updatedAt: serverTimestamp(),
+      uid: currentUser.uid,
+      email: currentUser.email || null
+    }, { merge: true });
+  }, 350);
+}
+
+async function loadCloudState(uid) {
+  const snapshot = await getDoc(getUserStateRef(uid));
+  if (!snapshot.exists()) return false;
+  const data = snapshot.data();
+  if (!data?.state) return false;
+  state = normalizeState(data.state);
+  return true;
 }
 
 function setState(updater, shouldRender = true) {
@@ -1104,12 +1139,42 @@ function createFocusPlayerWidget(object) {
 function createLocalModeIndicator() {
   const indicator = el('aside', 'local-mode-indicator', {
     'aria-live': 'polite',
-    'aria-label': 'Local Mode: Saved on this device'
+    'aria-label': 'Cloud sync status'
   });
   const copy = el('div');
-  copy.append(el('strong', '', { text: 'Local Mode' }), el('small', '', { text: 'Saved on this device' }));
+  copy.append(el('strong', '', { text: currentUser ? 'Cloud Sync ON' : 'Cloud Sync OFF' }), el('small', '', { text: currentUser ? 'Guardado en Firebase' : 'Inicia sesión para sincronizar en la nube' }));
   indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy);
   return indicator;
+}
+
+function createAuthPanel() {
+  const panel = el('aside', 'auth-panel', { 'aria-label': 'Estado de sesión' });
+  const copy = el('div', 'auth-copy');
+  if (currentUser) {
+    copy.append(el('strong', '', { text: 'Google conectado' }), el('small', '', { text: currentUser.email || 'Usuario autenticado' }));
+  } else {
+    copy.append(el('strong', '', { text: 'Sin sesión' }), el('small', '', { text: 'Inicia sesión para guardar en la nube' }));
+  }
+
+  const action = el('button', 'auth-action', {
+    type: 'button',
+    text: currentUser ? 'Cerrar sesión' : 'Log in con Google',
+    onClick: async () => {
+      try {
+        if (currentUser) {
+          await signOut(firebaseAuth);
+          showToast('Sesión cerrada. El guardado en nube está desactivado.');
+        } else {
+          await signInWithPopup(firebaseAuth, googleProvider);
+          showToast('Sesión iniciada con Google.');
+        }
+      } catch {
+        showToast('No se pudo completar el login con Google.');
+      }
+    }
+  });
+  panel.append(copy, action);
+  return panel;
 }
 
 function createClock() {
@@ -1295,7 +1360,7 @@ function render() {
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
   const widgets = el('section', 'fixed-widgets');
-  widgets.append(createLocalModeIndicator(), createClock(), createCalendar());
+  widgets.append(createAuthPanel(), createLocalModeIndicator(), createClock(), createCalendar());
   main.append(widgets);
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
@@ -1323,6 +1388,16 @@ function bootVirtualDesk() {
   if (!root) return;
 
   render();
+
+  onAuthStateChanged(firebaseAuth, async (user) => {
+    currentUser = user || null;
+    if (currentUser) {
+      const restored = await loadCloudState(currentUser.uid);
+      if (restored) showToast('Estado restaurado desde Firebase.');
+      else persist();
+    }
+    render();
+  });
 }
 
 if (document.readyState === 'loading') {
