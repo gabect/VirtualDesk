@@ -799,68 +799,6 @@ button {
   backdrop-filter: blur(2px);
 }
 
-.login-overlay {
-  position: fixed;
-  z-index: 95;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(18, 29, 45, .22);
-  backdrop-filter: blur(3px);
-}
-
-.login-dialog {
-  width: min(420px, calc(100vw - 30px));
-  border: 1px solid rgba(255,255,255,.58);
-  border-radius: 24px;
-  color: #1d2d43;
-  background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(219,232,245,.45));
-  box-shadow: 0 24px 56px rgba(0,0,0,.33), inset 0 1px rgba(255,255,255,.92);
-  backdrop-filter: blur(22px) saturate(145%);
-}
-
-.login-form {
-  display: grid;
-  gap: 10px;
-  padding: 22px;
-}
-
-.login-form h2,
-.login-form p {
-  margin: 0;
-}
-
-.login-form p {
-  color: rgba(29,45,67,.72);
-  font-size: 14px;
-}
-
-.login-form input {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(41,58,84,.25);
-  border-radius: 12px;
-  background: rgba(255,255,255,.75);
-}
-
-.login-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.login-actions button.primary {
-  color: #fff;
-  background: linear-gradient(#3860b7, #2d4f9b);
-}
-
-.google-login-button {
-  width: 100%;
-  min-height: 42px;
-}
-
 .trash-dialog {
   width: min(760px, calc(100vw - 44px));
   max-height: min(680px, calc(100dvh - 56px));

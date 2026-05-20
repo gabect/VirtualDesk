@@ -1,6 +1,3 @@
-import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
-import { auth, googleProvider } from './firebase-config.js';
-
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
@@ -51,15 +48,7 @@ let clockTimer = null;
 let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
-let loginDialogOpen = false;
 let pendingFocusAutoplayId = null;
-let currentUser = null;
-let authBusy = false;
-
-onAuthStateChanged(auth, (user) => {
-  currentUser = user || null;
-  if (root) render();
-});
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -209,11 +198,7 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')],
-    ['login-icon', '🔐', 'Log in', () => {
-      loginDialogOpen = true;
-      render();
-    }]
+    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
@@ -222,77 +207,6 @@ function createDock() {
     dock.append(button);
   });
   return dock;
-}
-
-function createLoginDialog() {
-  const overlay = el('section', 'login-overlay', { 'aria-label': 'Inicio de sesión' });
-  const dialog = el('div', 'login-dialog', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'login-title' });
-  const panel = el('div', 'login-form');
-
-  const isLogged = Boolean(currentUser);
-  const userText = currentUser?.email || currentUser?.displayName || 'Usuario autenticado';
-
-  const googleButton = el('button', 'primary google-login-button', {
-    type: 'button',
-    text: authBusy ? 'Conectando…' : 'Continuar con Google',
-    disabled: authBusy,
-    onClick: async () => {
-      if (authBusy) return;
-      authBusy = true;
-      render();
-      try {
-        await signInWithPopup(auth, googleProvider);
-        loginDialogOpen = false;
-        showToast('Sesión iniciada con Google');
-      } catch (error) {
-        showToast('No se pudo iniciar sesión con Google');
-      } finally {
-        authBusy = false;
-        render();
-      }
-    }
-  });
-
-  const signoutButton = el('button', '', {
-    type: 'button',
-    text: authBusy ? 'Cerrando…' : 'Cerrar sesión',
-    disabled: authBusy,
-    onClick: async () => {
-      if (authBusy) return;
-      authBusy = true;
-      render();
-      try {
-        await signOut(auth);
-        showToast('Sesión cerrada');
-      } catch {
-        showToast('No se pudo cerrar sesión');
-      } finally {
-        authBusy = false;
-        render();
-      }
-    }
-  });
-
-  const actions = el('div', 'login-actions');
-  actions.append(el('button', '', { type: 'button', text: 'Cerrar', onClick: () => { loginDialogOpen = false; render(); } }));
-  if (isLogged) actions.append(signoutButton);
-
-  panel.append(
-    el('h2', '', { text: 'Log in', id: 'login-title' }),
-    el('p', '', { text: isLogged ? `Conectado como ${userText}` : 'Inicia sesión con tu cuenta de Google sin salir del escritorio.' }),
-    ...(isLogged ? [] : [googleButton]),
-    actions
-  );
-
-  dialog.append(panel);
-  overlay.append(dialog);
-  overlay.addEventListener('pointerdown', (event) => {
-    if (event.target === overlay) {
-      loginDialogOpen = false;
-      render();
-    }
-  });
-  return overlay;
 }
 
 function createBackgroundPanel() {
@@ -1394,7 +1308,6 @@ function render() {
   });
   main.append(layer);
   if (trashDialogOpen) main.append(createTrashDialog());
-  if (loginDialogOpen) main.append(createLoginDialog());
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
   ensurePomodoroTicker();
