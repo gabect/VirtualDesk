@@ -3,7 +3,6 @@ import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.5/firebas
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
-const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
 const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
@@ -46,7 +45,6 @@ const DEFAULT_FOCUS_STATION = 'lofi';
 
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 let root = null;
-let saveTimer = null;
 let toastTimer = null;
 let pendingToastMessage = '';
 let clockTimer = null;
@@ -96,7 +94,7 @@ const defaultState = {
   ]
 };
 
-let state = loadState();
+let state = structuredClone(defaultState);
 
 function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
@@ -127,22 +125,8 @@ function normalizeState(value) {
   };
 }
 
-function loadState() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? normalizeState(JSON.parse(saved)) : structuredClone(defaultState);
-  } catch {
-    return structuredClone(defaultState);
-  }
-}
-
-function saveLocalState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
 
 function persist() {
-  window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(saveLocalState, 60);
   scheduleCloudSave();
 }
 
@@ -170,7 +154,6 @@ async function loadCloudState(uid) {
   const data = snapshot.data();
   if (!data?.state) return false;
   state = normalizeState(data.state);
-  saveLocalState();
   return true;
 }
 
@@ -1156,10 +1139,10 @@ function createFocusPlayerWidget(object) {
 function createLocalModeIndicator() {
   const indicator = el('aside', 'local-mode-indicator', {
     'aria-live': 'polite',
-    'aria-label': 'Local Mode: Saved on this device'
+    'aria-label': 'Cloud sync status'
   });
   const copy = el('div');
-  copy.append(el('strong', '', { text: 'Local Mode' }), el('small', '', { text: 'Saved on this device' }));
+  copy.append(el('strong', '', { text: currentUser ? 'Cloud Sync ON' : 'Cloud Sync OFF' }), el('small', '', { text: currentUser ? 'Guardado en Firebase' : 'Inicia sesión para sincronizar en la nube' }));
   indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy);
   return indicator;
 }
@@ -1170,7 +1153,7 @@ function createAuthPanel() {
   if (currentUser) {
     copy.append(el('strong', '', { text: 'Google conectado' }), el('small', '', { text: currentUser.email || 'Usuario autenticado' }));
   } else {
-    copy.append(el('strong', '', { text: 'Modo local' }), el('small', '', { text: 'Inicia sesión para guardar en la nube' }));
+    copy.append(el('strong', '', { text: 'Sin sesión' }), el('small', '', { text: 'Inicia sesión para guardar en la nube' }));
   }
 
   const action = el('button', 'auth-action', {
@@ -1180,7 +1163,7 @@ function createAuthPanel() {
       try {
         if (currentUser) {
           await signOut(firebaseAuth);
-          showToast('Sesión cerrada. Sigues en modo local.');
+          showToast('Sesión cerrada. El guardado en nube está desactivado.');
         } else {
           await signInWithPopup(firebaseAuth, googleProvider);
           showToast('Sesión iniciada con Google.');
@@ -1411,6 +1394,7 @@ function bootVirtualDesk() {
     if (currentUser) {
       const restored = await loadCloudState(currentUser.uid);
       if (restored) showToast('Estado restaurado desde Firebase.');
+      else persist();
     }
     render();
   });

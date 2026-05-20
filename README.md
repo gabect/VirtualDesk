@@ -28,30 +28,13 @@ npm run build
 ```
 
 
-## Persistencia
+## Persistencia en la nube (Firebase)
 
-La aplicación guarda automáticamente el estado completo del escritorio en `localStorage` usando la clave `virtualDeskState`. El estado incluye:
+La aplicación guarda el estado del escritorio **solo en la nube** usando Firebase + Firestore (sin guardado local en `localStorage`).
 
-- Fondo actual por color o URL de imagen.
-- Tipo de cada objeto del escritorio.
-- Posición `x/y` de notas, libretas y listas de tareas.
-- Contenido de Sticky Notes.
-- Páginas, página activa y estado abierto/cerrado de Notebook.
-- Tareas y estado completado de To-Do List.
-
-Para reiniciar el escritorio, borra esa clave desde las herramientas de desarrollador del navegador o ejecuta:
-
-```js
-localStorage.removeItem('virtualDeskState')
-```
-
-## Login con Google + Firebase
-
-La app ahora incluye botón **"Log in con Google"** para autenticación y sincronización en la nube.
-
-- Al iniciar sesión, se carga el estado del usuario desde Firestore (si existe).
-- Cada cambio del escritorio se sigue guardando en `localStorage` y además se sincroniza con Firebase.
-- Se guardan fondo, texto, posición de widgets/objetos y en general todas las acciones persistidas del escritorio dentro de `state`.
+- Al iniciar sesión con Google, se restaura el estado del usuario desde Firestore si ya existe.
+- Si es la primera vez del usuario, se crea el documento con el estado inicial.
+- Se guardan fondo, texto, posición de widgets/objetos y todas las acciones persistidas del escritorio dentro de `state`.
 
 Colección usada en Firestore:
 
