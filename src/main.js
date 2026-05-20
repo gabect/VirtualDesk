@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { browserLocalPersistence, getAuth, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
@@ -70,6 +70,7 @@ const firebaseAuth = getAuth(firebaseApp);
 const firestoreDb = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
 let currentUser = null;
+let cloudSyncStatus = 'signed-out';
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -137,24 +138,43 @@ function getUserStateRef(uid) {
 function scheduleCloudSave() {
   if (!currentUser) return;
   window.clearTimeout(cloudSaveTimer);
+  cloudSyncStatus = 'saving';
+  render();
   cloudSaveTimer = window.setTimeout(async () => {
     if (!currentUser) return;
-    await setDoc(getUserStateRef(currentUser.uid), {
-      state,
-      updatedAt: serverTimestamp(),
-      uid: currentUser.uid,
-      email: currentUser.email || null
-    }, { merge: true });
+    try {
+      await setDoc(getUserStateRef(currentUser.uid), {
+        state,
+        updatedAt: serverTimestamp(),
+        uid: currentUser.uid,
+        email: currentUser.email || null
+      }, { merge: true });
+      cloudSyncStatus = 'saved';
+      render();
+    } catch (error) {
+      console.error('Firestore save failed:', error);
+      cloudSyncStatus = 'error';
+      render();
+      showToast('Error al guardar en Firebase. Verifica permisos o conexión.');
+    }
   }, 350);
 }
 
 async function loadCloudState(uid) {
-  const snapshot = await getDoc(getUserStateRef(uid));
-  if (!snapshot.exists()) return false;
-  const data = snapshot.data();
-  if (!data?.state) return false;
-  state = normalizeState(data.state);
-  return true;
+  try {
+    const snapshot = await getDoc(getUserStateRef(uid));
+    if (!snapshot.exists()) return false;
+    const data = snapshot.data();
+    if (!data?.state) return false;
+    state = normalizeState(data.state);
+    cloudSyncStatus = 'saved';
+    return true;
+  } catch (error) {
+    console.error('Firestore load failed:', error);
+    cloudSyncStatus = 'error';
+    showToast('Error al cargar estado desde Firebase.');
+    return false;
+  }
 }
 
 function setState(updater, shouldRender = true) {
@@ -1142,7 +1162,14 @@ function createLocalModeIndicator() {
     'aria-label': 'Cloud sync status'
   });
   const copy = el('div');
-  copy.append(el('strong', '', { text: currentUser ? 'Cloud Sync ON' : 'Cloud Sync OFF' }), el('small', '', { text: currentUser ? 'Guardado en Firebase' : 'Inicia sesión para sincronizar en la nube' }));
+  const copyByStatus = {
+    'signed-out': { title: 'Cloud Sync OFF', subtitle: 'Inicia sesión para sincronizar en la nube' },
+    saving: { title: 'Cloud Sync...', subtitle: 'Guardando cambios en Firebase' },
+    saved: { title: 'Cloud Sync ON', subtitle: 'Guardado en Firebase' },
+    error: { title: 'Cloud Sync Error', subtitle: 'No se pudo guardar/cargar en Firebase' }
+  };
+  const statusCopy = copyByStatus[cloudSyncStatus] || copyByStatus['signed-out'];
+  copy.append(el('strong', '', { text: statusCopy.title }), el('small', '', { text: statusCopy.subtitle }));
   indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy);
   return indicator;
 }
@@ -1163,12 +1190,15 @@ function createAuthPanel() {
       try {
         if (currentUser) {
           await signOut(firebaseAuth);
+          cloudSyncStatus = 'signed-out';
           showToast('Sesión cerrada. El guardado en nube está desactivado.');
         } else {
+          await setPersistence(firebaseAuth, browserLocalPersistence);
           await signInWithPopup(firebaseAuth, googleProvider);
           showToast('Sesión iniciada con Google.');
         }
-      } catch {
+      } catch (error) {
+        console.error('Google auth failed:', error);
         showToast('No se pudo completar el login con Google.');
       }
     }
@@ -1391,10 +1421,15 @@ function bootVirtualDesk() {
 
   onAuthStateChanged(firebaseAuth, async (user) => {
     currentUser = user || null;
+    cloudSyncStatus = currentUser ? 'saving' : 'signed-out';
+    render();
     if (currentUser) {
       const restored = await loadCloudState(currentUser.uid);
       if (restored) showToast('Estado restaurado desde Firebase.');
-      else persist();
+      else {
+        cloudSyncStatus = cloudSyncStatus === 'error' ? 'error' : 'saving';
+        persist();
+      }
     }
     render();
   });
