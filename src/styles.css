@@ -215,23 +215,6 @@ button {
   box-shadow: 0 0 0 5px rgba(245,158,11,.18), inset 0 1px rgba(255,255,255,.8);
 }
 
-.auth-button {
-  min-height: 32px;
-  margin-left: auto;
-  padding: 0 10px;
-  border: 1px solid rgba(35,52,75,.2);
-  border-radius: 11px;
-  color: #203047;
-  white-space: nowrap;
-  background: linear-gradient(#fff, #d9e2ec);
-  box-shadow: inset 0 1px rgba(255,255,255,.9), 0 3px 7px rgba(0,0,0,.12);
-}
-
-.auth-button:focus-visible,
-.auth-button:hover {
-  filter: brightness(1.04);
-}
-
 .retro-clock {
   padding: 13px 16px;
   border: 2px solid rgba(13, 21, 27, .5);

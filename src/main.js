@@ -1,26 +1,3 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
-import {
-  getAuth,
-  getRedirectResult,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithRedirect,
-  signOut
-} from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyCE63jfI4rtailw2SmmUMywX5uMFFEPEK4',
-  authDomain: 'virtual-desk-8e799.firebaseapp.com',
-  projectId: 'virtual-desk-8e799',
-  storageBucket: 'virtual-desk-8e799.firebasestorage.app',
-  messagingSenderId: '579230544333',
-  appId: '1:579230544333:web:eb5ed3e3138a977a3ad484'
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
-
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
@@ -72,10 +49,6 @@ let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
-let authUser = null;
-let authReady = false;
-let firebaseAuthStarted = false;
-
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -1128,73 +1101,14 @@ function createFocusPlayerWidget(object) {
   return frame;
 }
 
-
-function getAuthDisplayName(user) {
-  return user?.email || user?.displayName || 'Google account';
-}
-
-async function handleGoogleLogin() {
-  console.log("Starting Google redirect sign-in");
-  await signInWithRedirect(auth, googleProvider).catch((error) => {
-    console.error("Auth error:", error.code, error.message, error);
-    showToast("Auth error: " + (error.code || "unknown"));
-  });
-}
-
-async function handleGoogleLogout() {
-  await signOut(auth)
-    .then(() => showToast('Signed out of Google'))
-    .catch((error) => {
-      showToast(error?.message || 'Google logout did not finish');
-    });
-}
-
-function startFirebaseAuth() {
-  if (firebaseAuthStarted) return;
-  firebaseAuthStarted = true;
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      console.log("Auth state user:", user.uid, user.email);
-    } else {
-      console.log("Auth state: no user");
-    }
-    authUser = user;
-    authReady = true;
-    render();
-  });
-
-  getRedirectResult(auth)
-    .then((result) => {
-      console.log("Redirect result:", result?.user?.uid || "no redirect user");
-      if (result?.user) showToast(`Signed in as ${getAuthDisplayName(result.user)}`);
-    })
-    .catch((error) => {
-      console.error("Redirect error:", error.code, error.message, error);
-      showToast("Redirect error: " + (error.code || "unknown"));
-    });
-}
-
 function createLocalModeIndicator() {
-  const signedIn = Boolean(authUser);
-  const statusText = signedIn
-    ? getAuthDisplayName(authUser)
-    : 'Saved locally. Google login available.';
   const indicator = el('aside', 'local-mode-indicator', {
     'aria-live': 'polite',
-    'aria-label': signedIn ? `Google login active: ${getAuthDisplayName(authUser)}` : 'Local Mode: Saved on this device'
+    'aria-label': 'Local Mode: Saved on this device'
   });
   const copy = el('div');
-  copy.append(el('strong', '', { text: signedIn ? 'Google Login' : 'Local Mode' }), el('small', '', { text: statusText }));
-  const button = el('button', 'auth-button', {
-    type: 'button',
-    text: signedIn ? 'Logout' : 'Login with Google',
-    onClick: () => {
-      if (signedIn) handleGoogleLogout();
-      else handleGoogleLogin();
-    }
-  });
-  indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy, button);
+  copy.append(el('strong', '', { text: 'Local Mode' }), el('small', '', { text: 'Saved on this device' }));
+  indicator.append(el('span', 'local-mode-dot', { 'aria-hidden': 'true' }), copy);
   return indicator;
 }
 
@@ -1408,7 +1322,6 @@ function bootVirtualDesk() {
   root = document.getElementById('root');
   if (!root) return;
 
-  startFirebaseAuth();
   render();
 }
 
