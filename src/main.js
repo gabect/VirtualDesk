@@ -1,5 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
 import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
 
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
@@ -53,6 +54,30 @@ let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let loginDialogOpen = false;
 let pendingFocusAutoplayId = null;
+let currentUser = null;
+let authBusy = false;
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
+  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
+  projectId: 'virtual-desk-2e8a1',
+  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
+  messagingSenderId: '1075800179675',
+  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
+  measurementId: 'G-YMM74MBCGW'
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
+analyticsIsSupported().then((supported) => {
+  if (supported) getAnalytics(firebaseApp);
+}).catch(() => {});
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user || null;
+  if (root) render();
+});
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
@@ -235,31 +260,64 @@ function createDock() {
 function createLoginDialog() {
   const overlay = el('section', 'login-overlay', { 'aria-label': 'Inicio de sesión' });
   const dialog = el('div', 'login-dialog', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'login-title' });
-  const form = el('form', 'login-form');
-  const email = el('input', '', { type: 'email', required: true, placeholder: 'correo@ejemplo.com', 'aria-label': 'Correo electrónico' });
-  const password = el('input', '', { type: 'password', required: true, minlength: '6', placeholder: '••••••••', 'aria-label': 'Contraseña' });
+  const panel = el('div', 'login-form');
 
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    loginDialogOpen = false;
-    render();
-    showToast(`Sesión iniciada: ${email.value.trim() || 'usuario'}`);
+  const isLogged = Boolean(currentUser);
+  const userText = currentUser?.email || currentUser?.displayName || 'Usuario autenticado';
+
+  const googleButton = el('button', 'primary google-login-button', {
+    type: 'button',
+    text: authBusy ? 'Conectando…' : 'Continuar con Google',
+    disabled: authBusy,
+    onClick: async () => {
+      if (authBusy) return;
+      authBusy = true;
+      render();
+      try {
+        await signInWithPopup(auth, googleProvider);
+        loginDialogOpen = false;
+        showToast('Sesión iniciada con Google');
+      } catch (error) {
+        showToast('No se pudo iniciar sesión con Google');
+      } finally {
+        authBusy = false;
+        render();
+      }
+    }
+  });
+
+  const signoutButton = el('button', '', {
+    type: 'button',
+    text: authBusy ? 'Cerrando…' : 'Cerrar sesión',
+    disabled: authBusy,
+    onClick: async () => {
+      if (authBusy) return;
+      authBusy = true;
+      render();
+      try {
+        await signOut(auth);
+        showToast('Sesión cerrada');
+      } catch {
+        showToast('No se pudo cerrar sesión');
+      } finally {
+        authBusy = false;
+        render();
+      }
+    }
   });
 
   const actions = el('div', 'login-actions');
-  actions.append(
-    el('button', '', { type: 'button', text: 'Cancelar', onClick: () => { loginDialogOpen = false; render(); } }),
-    el('button', 'primary', { type: 'submit', text: 'Entrar' })
-  );
+  actions.append(el('button', '', { type: 'button', text: 'Cerrar', onClick: () => { loginDialogOpen = false; render(); } }));
+  if (isLogged) actions.append(signoutButton);
 
-  form.append(
+  panel.append(
     el('h2', '', { text: 'Log in', id: 'login-title' }),
-    el('p', '', { text: 'Inicia sesión sin salir del escritorio.' }),
-    email,
-    password,
+    el('p', '', { text: isLogged ? `Conectado como ${userText}` : 'Inicia sesión con tu cuenta de Google sin salir del escritorio.' }),
+    ...(isLogged ? [] : [googleButton]),
     actions
   );
-  dialog.append(form);
+
+  dialog.append(panel);
   overlay.append(dialog);
   overlay.addEventListener('pointerdown', (event) => {
     if (event.target === overlay) {

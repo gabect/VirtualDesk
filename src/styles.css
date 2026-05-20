@@ -856,6 +856,11 @@ button {
   background: linear-gradient(#3860b7, #2d4f9b);
 }
 
+.google-login-button {
+  width: 100%;
+  min-height: 42px;
+}
+
 .trash-dialog {
   width: min(760px, calc(100vw - 44px));
   max-height: min(680px, calc(100dvh - 56px));
