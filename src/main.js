@@ -1,6 +1,5 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+import { auth, googleProvider } from './firebase-config.js';
 
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
@@ -57,42 +56,10 @@ let pendingFocusAutoplayId = null;
 let currentUser = null;
 let authBusy = false;
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
-  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
-  projectId: 'virtual-desk-2e8a1',
-  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
-  messagingSenderId: '1075800179675',
-  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
-  measurementId: 'G-YMM74MBCGW'
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
-analyticsIsSupported().then((supported) => {
-  if (supported) getAnalytics(firebaseApp);
-}).catch(() => {});
-
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
   if (root) render();
 });
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
-  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
-  projectId: 'virtual-desk-2e8a1',
-  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
-  messagingSenderId: '1075800179675',
-  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
-  measurementId: 'G-YMM74MBCGW'
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-analyticsIsSupported().then((supported) => {
-  if (supported) getAnalytics(firebaseApp);
-}).catch(() => {});
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
