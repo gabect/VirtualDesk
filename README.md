@@ -44,3 +44,15 @@ Para reiniciar el escritorio, borra esa clave desde las herramientas de desarrol
 ```js
 localStorage.removeItem('virtualDeskState')
 ```
+
+## Login con Google + Firebase
+
+La app ahora incluye botón **"Log in con Google"** para autenticación y sincronización en la nube.
+
+- Al iniciar sesión, se carga el estado del usuario desde Firestore (si existe).
+- Cada cambio del escritorio se sigue guardando en `localStorage` y además se sincroniza con Firebase.
+- Se guardan fondo, texto, posición de widgets/objetos y en general todas las acciones persistidas del escritorio dentro de `state`.
+
+Colección usada en Firestore:
+
+- `users/{uid}/desk/state`
