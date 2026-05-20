@@ -9,12 +9,13 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyCE63jfI4rtailw2SmmUMywX5uMFFEPEK4',
-  authDomain: 'virtual-desk-8e799.firebaseapp.com',
-  projectId: 'virtual-desk-8e799',
-  storageBucket: 'virtual-desk-8e799.firebasestorage.app',
-  messagingSenderId: '579230544333',
-  appId: '1:579230544333:web:eb5ed3e3138a977a3ad484'
+  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
+  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
+  projectId: 'virtual-desk-2e8a1',
+  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
+  messagingSenderId: '1075800179675',
+  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
+  measurementId: 'G-YMM74MBCGW'
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
