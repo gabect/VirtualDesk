@@ -1,3 +1,6 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js';
+
 const STORAGE_KEY = 'virtualDeskState';
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
 const NOTEBOOK_OPEN_CLICK_MAX_MS = 180;
@@ -48,7 +51,23 @@ let clockTimer = null;
 let pomodoroTimer = null;
 let pomodoroAudioContext = null;
 let trashDialogOpen = false;
+let loginDialogOpen = false;
 let pendingFocusAutoplayId = null;
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
+  authDomain: 'virtual-desk-2e8a1.firebaseapp.com',
+  projectId: 'virtual-desk-2e8a1',
+  storageBucket: 'virtual-desk-2e8a1.firebasestorage.app',
+  messagingSenderId: '1075800179675',
+  appId: '1:1075800179675:web:b0da4b2463f0055feb9dfe',
+  measurementId: 'G-YMM74MBCGW'
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+analyticsIsSupported().then((supported) => {
+  if (supported) getAnalytics(firebaseApp);
+}).catch(() => {});
 
 const defaultState = {
   background: { mode: 'color', value: '#5e789a' },
@@ -198,7 +217,11 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
+    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')],
+    ['login-icon', '🔐', 'Log in', () => {
+      loginDialogOpen = true;
+      render();
+    }]
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
@@ -207,6 +230,44 @@ function createDock() {
     dock.append(button);
   });
   return dock;
+}
+
+function createLoginDialog() {
+  const overlay = el('section', 'login-overlay', { 'aria-label': 'Inicio de sesión' });
+  const dialog = el('div', 'login-dialog', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'login-title' });
+  const form = el('form', 'login-form');
+  const email = el('input', '', { type: 'email', required: true, placeholder: 'correo@ejemplo.com', 'aria-label': 'Correo electrónico' });
+  const password = el('input', '', { type: 'password', required: true, minlength: '6', placeholder: '••••••••', 'aria-label': 'Contraseña' });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    loginDialogOpen = false;
+    render();
+    showToast(`Sesión iniciada: ${email.value.trim() || 'usuario'}`);
+  });
+
+  const actions = el('div', 'login-actions');
+  actions.append(
+    el('button', '', { type: 'button', text: 'Cancelar', onClick: () => { loginDialogOpen = false; render(); } }),
+    el('button', 'primary', { type: 'submit', text: 'Entrar' })
+  );
+
+  form.append(
+    el('h2', '', { text: 'Log in', id: 'login-title' }),
+    el('p', '', { text: 'Inicia sesión sin salir del escritorio.' }),
+    email,
+    password,
+    actions
+  );
+  dialog.append(form);
+  overlay.append(dialog);
+  overlay.addEventListener('pointerdown', (event) => {
+    if (event.target === overlay) {
+      loginDialogOpen = false;
+      render();
+    }
+  });
+  return overlay;
 }
 
 function createBackgroundPanel() {
@@ -1308,6 +1369,7 @@ function render() {
   });
   main.append(layer);
   if (trashDialogOpen) main.append(createTrashDialog());
+  if (loginDialogOpen) main.append(createLoginDialog());
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
   root.append(main);
   ensurePomodoroTicker();
