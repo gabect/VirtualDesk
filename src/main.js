@@ -137,11 +137,14 @@ function getUserStateRef(uid) {
 
 function scheduleCloudSave() {
   if (!currentUser) return;
+
   window.clearTimeout(cloudSaveTimer);
   cloudSyncStatus = 'saving';
-  render();
+  updateCloudSyncIndicatorOnly();
+
   cloudSaveTimer = window.setTimeout(async () => {
     if (!currentUser) return;
+
     try {
       await setDoc(getUserStateRef(currentUser.uid), {
         state,
@@ -149,12 +152,13 @@ function scheduleCloudSave() {
         uid: currentUser.uid,
         email: currentUser.email || null
       }, { merge: true });
+
       cloudSyncStatus = 'saved';
-      render();
+      updateCloudSyncIndicatorOnly();
     } catch (error) {
       console.error('Firestore save failed:', error);
       cloudSyncStatus = 'error';
-      render();
+      updateCloudSyncIndicatorOnly();
       showToast('Error al guardar en Firebase. Verifica permisos o conexión.');
     }
   }, 350);
@@ -1154,6 +1158,38 @@ function createFocusPlayerWidget(object) {
   });
 
   return frame;
+}
+
+
+function updateCloudSyncIndicatorOnly() {
+  const indicator = document.querySelector('.local-mode-indicator');
+  if (!indicator) return;
+
+  const copyByStatus = {
+    'signed-out': {
+      title: 'Cloud Sync OFF',
+      subtitle: 'Inicia sesión para sincronizar en la nube'
+    },
+    saving: {
+      title: 'Cloud Sync...',
+      subtitle: 'Guardando cambios en Firebase'
+    },
+    saved: {
+      title: 'Cloud Sync ON',
+      subtitle: 'Guardado en Firebase'
+    },
+    error: {
+      title: 'Cloud Sync Error',
+      subtitle: 'No se pudo guardar/cargar en Firebase'
+    }
+  };
+
+  const statusCopy = copyByStatus[cloudSyncStatus] || copyByStatus['signed-out'];
+  const strong = indicator.querySelector('strong');
+  const small = indicator.querySelector('small');
+
+  if (strong) strong.textContent = statusCopy.title;
+  if (small) small.textContent = statusCopy.subtitle;
 }
 
 function createLocalModeIndicator() {
