@@ -78,6 +78,7 @@ const defaultState = {
     {
       id: 'welcome-notebook',
       type: 'notebook',
+      name: 'Notebook',
       status: 'active',
       x: 170,
       y: 92,
@@ -269,7 +270,7 @@ function applyBackground(main) {
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
   const buttons = [
-    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
+    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
@@ -775,6 +776,49 @@ function createStickyNote(object) {
   return frame;
 }
 
+function getNotebookName(object) {
+  return (object.name || 'Notebook').trim() || 'Notebook';
+}
+
+function enableNotebookRename({ trigger, object, getLabel, onCancel }) {
+  const currentName = getNotebookName(getObjectById(object.id, object));
+  const input = el('input', 'notebook-name-input', { type: 'text', value: currentName, 'aria-label': 'Nombre de libreta', 'data-no-drag': true });
+  let canceled = false;
+  let committed = false;
+
+  const commit = () => {
+    if (committed || canceled) return;
+    committed = true;
+    const nextName = input.value.trim();
+    if (nextName && nextName !== currentName) updateObject(object.id, { name: nextName });
+    else render();
+  };
+
+  const cancel = () => {
+    if (committed || canceled) return;
+    canceled = true;
+    onCancel(currentName);
+  };
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel();
+    }
+  });
+  input.addEventListener('blur', commit);
+
+  trigger.replaceWith(input);
+  input.focus();
+  input.select();
+  if (typeof getLabel === 'function') getLabel(input);
+}
+
 function createNotebook(object) {
   const dragOptions = object.open
     ? { canStart: isOpenNotebookDragZone, moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD }
@@ -795,7 +839,20 @@ function createNotebook(object) {
       event.preventDefault();
       updateObject(object.id, { open: true });
     });
-    cover.append(el('span', 'spiral'), el('span', 'cover-title', { text: 'Notebook' }), el('span', 'cover-subtitle', { text: 'click to open' }));
+    const title = el('span', 'cover-title', { text: getNotebookName(object), 'data-no-drag': true });
+    title.addEventListener('dblclick', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      enableNotebookRename({
+        trigger: title,
+        object,
+        onCancel: (name) => {
+          title.textContent = name;
+          render();
+        }
+      });
+    });
+    cover.append(el('span', 'spiral'), title, el('span', 'cover-subtitle', { text: 'click to open' }));
     frame.append(cover);
     return frame;
   }
@@ -803,7 +860,20 @@ function createNotebook(object) {
   const wrap = el('div', 'notebook-open');
   const toolbar = el('header', 'notebook-toolbar notebook-drag-zone', { title: 'Arrastra desde este margen superior para mover la libreta' });
   const close = el('button', '', { text: 'Cerrar', onClick: () => updateObject(object.id, { open: false }) });
-  toolbar.append(close, el('span', '', { text: `Página ${(object.activePage || 0) + 1} / ${(object.pages || ['']).length}` }));
+  const title = el('strong', 'notebook-name', { text: getNotebookName(object), 'data-no-drag': true });
+  title.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    enableNotebookRename({
+      trigger: title,
+      object,
+      onCancel: (name) => {
+        title.textContent = name;
+        render();
+      }
+    });
+  });
+  toolbar.append(close, title, el('span', '', { text: `Página ${(object.activePage || 0) + 1} / ${(object.pages || ['']).length}` }));
 
   const page = el('div', `notebook-page ${object.flipDirection === 'prev' ? 'flip-back' : 'flip-next'}`);
   const textarea = el('textarea', '', { placeholder: 'Nueva página...', 'aria-label': 'Página editable de libreta' });
