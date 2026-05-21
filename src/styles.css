@@ -664,10 +664,33 @@ button {
 .todo-pad header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
   font-family: Georgia, serif;
   font-size: 24px;
   font-weight: 800;
+}
+
+.todo-pad-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-pad-title-input {
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid rgba(80,80,80,.22);
+  border-radius: 10px;
+  background: rgba(255,255,255,.84);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .todo-add {
