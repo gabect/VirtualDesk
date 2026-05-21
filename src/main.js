@@ -126,6 +126,22 @@ function normalizeState(value) {
   };
 }
 
+function removeUndefinedDeep(value) {
+  if (Array.isArray(value)) {
+    return value.map(removeUndefinedDeep);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, itemValue]) => itemValue !== undefined)
+        .map(([key, itemValue]) => [key, removeUndefinedDeep(itemValue)])
+    );
+  }
+
+  return value;
+}
+
 
 function persist() {
   scheduleCloudSave();
@@ -146,8 +162,9 @@ function scheduleCloudSave() {
     if (!currentUser) return;
 
     try {
+      const cleanState = removeUndefinedDeep(state);
       await setDoc(getUserStateRef(currentUser.uid), {
-        state,
+        state: cleanState,
         updatedAt: serverTimestamp(),
         uid: currentUser.uid,
         email: currentUser.email || null
@@ -450,11 +467,14 @@ function trashObjectWithAnimation(frame, object, point) {
 
   window.setTimeout(() => {
     const latestObject = getObjectById(object.id, object);
-    updateObject(latestObject.id, {
+    const patch = {
       status: 'trashed',
-      trashedAt: Date.now(),
-      open: latestObject.type === 'notebook' ? false : latestObject.open
-    }, true);
+      trashedAt: Date.now()
+    };
+    if (latestObject.type === 'notebook') {
+      patch.open = false;
+    }
+    updateObject(latestObject.id, patch, true);
     shakeTrashCan();
     showToast('Objeto enviado a la Papelera');
   }, 420);
