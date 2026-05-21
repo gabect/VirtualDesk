@@ -523,6 +523,26 @@ button {
   font-weight: 800;
 }
 
+.notebook-name {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notebook-name-input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid rgba(35, 57, 86, .35);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  color: #1f2d43;
+}
+
 .notebook-page {
   --notebook-page-line-height: clamp(24px, calc(28px * var(--notebook-scale)), 30px);
   min-height: 0;
