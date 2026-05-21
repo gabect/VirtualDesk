@@ -280,7 +280,7 @@ function createDock() {
   const buttons = [
     ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
-    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
+    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', name: 'Today', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
@@ -788,6 +788,10 @@ function getNotebookName(object) {
   return (object.name || 'Notebook').trim() || 'Notebook';
 }
 
+function getTodoPadName(object) {
+  return (object.name || 'Today').trim() || 'Today';
+}
+
 function enableNotebookRename({ trigger, object, getLabel, onCancel }) {
   const currentName = getNotebookName(getObjectById(object.id, object));
   const input = el('input', 'notebook-name-input', { type: 'text', value: currentName, 'aria-label': 'Nombre de libreta', 'data-no-drag': true });
@@ -920,7 +924,22 @@ function createTodoList(object) {
   const frame = createFrame(object, 'todo-pad');
   const tasks = object.tasks || [];
   const header = el('header');
-  header.append(el('span', '', { text: 'Today' }), el('small', '', { text: `${tasks.filter((task) => task.done).length}/${tasks.length}` }));
+  const title = el('span', 'todo-pad-title', { text: getTodoPadName(object), 'data-no-drag': true });
+  title.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    enableNotebookRename({
+      trigger: title,
+      object: { ...object, name: getTodoPadName(object) },
+      getLabel: (input) => {
+        input.classList.remove('notebook-name-input');
+        input.classList.add('todo-pad-title-input');
+        input.setAttribute('aria-label', 'Nombre de lista de tareas');
+      },
+      onCancel: () => render()
+    });
+  });
+  header.append(title, el('small', '', { text: `${tasks.filter((task) => task.done).length}/${tasks.length}` }));
 
   const form = el('form', 'todo-add');
   const draft = el('input', '', { placeholder: 'Añadir tarea', 'aria-label': 'Nueva tarea' });
