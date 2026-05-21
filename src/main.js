@@ -1653,12 +1653,23 @@ function render() {
   if (!currentUser) {
     const authScreen = el('main', 'virtual-desk auth-screen');
     applyBackground(authScreen);
-    const loginPanel = el('section', 'auth-panel auth-screen-panel', { 'aria-label': 'Pantalla de inicio de sesión' });
+    const loginPanel = el('section', 'auth-screen-panel', { 'aria-label': 'Pantalla de inicio de sesión' });
+    const logo = el('img', 'auth-screen-logo', {
+      src: './src/assets/zone-desk-logo.png',
+      alt: 'ZONE desk logo',
+      loading: 'eager',
+      decoding: 'async'
+    });
+    logo.addEventListener('error', () => { logo.hidden = true; });
+
     loginPanel.append(
-      el('div', 'auth-copy', { html: '<strong>VirtualDesk</strong><small>Inicia sesión con Google para acceder a tu escritorio.</small>' }),
-      el('button', 'auth-action', {
+      logo,
+      el('h1', 'auth-screen-title', { text: 'ZONE' }),
+      el('p', 'auth-screen-tagline', { text: 'Your personal workspace' }),
+      el('p', 'auth-screen-support', { text: 'Sign in to access your notes, documents, and planning tools.' }),
+      el('button', 'auth-screen-google-button', {
         type: 'button',
-        text: 'Log in con Google',
+        html: '<span class="google-mark" aria-hidden="true">G</span><span>Continue with Google</span>',
         onClick: async () => {
           try {
             await setPersistence(firebaseAuth, browserLocalPersistence);
