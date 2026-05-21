@@ -650,8 +650,10 @@ button {
 }
 
 .todo-pad {
-  width: 270px;
+  --todo-width: 270px;
+  width: var(--todo-width);
   padding: 16px;
+  box-sizing: border-box;
   border-radius: 18px;
   background:
     repeating-linear-gradient(0deg, transparent 0 31px, rgba(88,129,171,.2) 32px 33px),
@@ -676,7 +678,8 @@ button {
 
 .todo-add input,
 .todo-item input[type="text"],
-.todo-item input:not([type]) {
+.todo-item input:not([type]),
+.todo-item textarea {
   min-width: 0;
   min-height: 42px;
   padding: 0 10px;
@@ -708,9 +711,50 @@ button {
   accent-color: #2d74c4;
 }
 
-.todo-item.done input:not([type="checkbox"]) {
+.todo-item.done input:not([type="checkbox"]),
+.todo-item.done textarea {
   color: rgba(36,46,60,.48);
   text-decoration: line-through;
+}
+
+
+.todo-task-text {
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.todo-resize-control {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 12px;
+  border-radius: 10px;
+  cursor: ew-resize;
+}
+
+.todo-resize-control.left {
+  left: -6px;
+}
+
+.todo-resize-control.right {
+  right: -6px;
+}
+
+.todo-resize-control::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 52px;
+  border-radius: 2px;
+  background: rgba(44, 70, 103, .35);
+  transform: translate(-50%, -50%);
 }
 
 .toast {
