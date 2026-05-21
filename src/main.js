@@ -1373,6 +1373,22 @@ function createFocusPlayerWidget(object) {
 }
 
 
+
+function resetWorkspaceState() {
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  trashDialogOpen = false;
+  pendingFocusAutoplayId = null;
+  pendingToastMessage = '';
+  state = structuredClone(defaultState);
+}
+
+async function handleLogout() {
+  resetWorkspaceState();
+  render();
+  await signOut(firebaseAuth);
+}
+
 function updateCloudSyncIndicatorOnly() {
   const indicator = document.querySelector('.local-mode-indicator');
   if (!indicator) return;
@@ -1437,7 +1453,7 @@ function createAuthPanel() {
     onClick: async () => {
       try {
         if (currentUser) {
-          await signOut(firebaseAuth);
+          await handleLogout();
           cloudSyncStatus = 'signed-out';
           showToast('Sesión cerrada. El guardado en nube está desactivado.');
         } else {
@@ -1633,6 +1649,33 @@ function createCalendar() {
 function render() {
   if (!root) return;
   root.replaceChildren();
+
+  if (!currentUser) {
+    const authScreen = el('main', 'virtual-desk auth-screen');
+    applyBackground(authScreen);
+    const loginPanel = el('section', 'auth-panel auth-screen-panel', { 'aria-label': 'Pantalla de inicio de sesión' });
+    loginPanel.append(
+      el('div', 'auth-copy', { html: '<strong>VirtualDesk</strong><small>Inicia sesión con Google para acceder a tu escritorio.</small>' }),
+      el('button', 'auth-action', {
+        type: 'button',
+        text: 'Log in con Google',
+        onClick: async () => {
+          try {
+            await setPersistence(firebaseAuth, browserLocalPersistence);
+            await signInWithPopup(firebaseAuth, googleProvider);
+            showToast('Sesión iniciada con Google.');
+          } catch (error) {
+            console.error('Google auth failed:', error);
+            showToast('No se pudo completar el login con Google.');
+          }
+        }
+      })
+    );
+    authScreen.append(el('div', 'ambient-glow'), loginPanel, el('div', 'toast', { role: 'status', hidden: true }));
+    root.append(authScreen);
+    return;
+  }
+
   const main = el('main', 'virtual-desk');
   applyBackground(main);
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
@@ -1668,16 +1711,22 @@ function bootVirtualDesk() {
   render();
 
   onAuthStateChanged(firebaseAuth, async (user) => {
-    currentUser = user || null;
-    cloudSyncStatus = currentUser ? 'saving' : 'signed-out';
+    if (!user) {
+      currentUser = null;
+      cloudSyncStatus = 'signed-out';
+      resetWorkspaceState();
+      render();
+      return;
+    }
+
+    currentUser = user;
+    cloudSyncStatus = 'saving';
     render();
-    if (currentUser) {
-      const restored = await loadCloudState(currentUser.uid);
-      if (restored) showToast('Estado restaurado desde Firebase.');
-      else {
-        cloudSyncStatus = cloudSyncStatus === 'error' ? 'error' : 'saving';
-        persist();
-      }
+    const restored = await loadCloudState(currentUser.uid);
+    if (restored) showToast('Estado restaurado desde Firebase.');
+    else {
+      cloudSyncStatus = cloudSyncStatus === 'error' ? 'error' : 'saving';
+      persist();
     }
     render();
   });
