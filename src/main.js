@@ -10,6 +10,8 @@ const NOTEBOOK_DRAG_MOVE_THRESHOLD = 6;
 const NOTEBOOK_ROTATION_LIMIT = 45;
 const NOTEBOOK_MIN_SCALE = 0.65;
 const NOTEBOOK_DEFAULT_DIMENSIONS = { width: 210, height: 270 };
+const TODO_DEFAULT_WIDTH = 270;
+const TODO_MIN_WIDTH = 220;
 
 const POMODORO_MODES = {
   work: { label: 'Work', minutes: 25, seconds: 25 * 60 },
@@ -102,6 +104,12 @@ function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
   if (baseObject?.type === 'pomodoro') return normalizePomodoro(baseObject);
   if (baseObject?.type === 'focusPlayer') return normalizeFocusPlayer(baseObject);
+  if (baseObject?.type === 'todo') {
+    return {
+      ...baseObject,
+      todoWidth: Math.max(TODO_MIN_WIDTH, Number(baseObject.todoWidth) || TODO_DEFAULT_WIDTH)
+    };
+  }
   if (baseObject?.type !== 'notebook') return baseObject;
 
   const legacyScale = Math.max(NOTEBOOK_MIN_SCALE, Number(baseObject.notebookScale) || 1);
@@ -272,7 +280,7 @@ function createDock() {
   const buttons = [
     ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
-    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [] })],
+    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
     ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
@@ -929,15 +937,99 @@ function createTodoList(object) {
     const checkbox = el('input', '', { type: 'checkbox', 'aria-label': `Completar ${task.text}` });
     checkbox.checked = task.done;
     checkbox.addEventListener('change', (event) => updateObject(object.id, { tasks: tasks.map((item) => item.id === task.id ? { ...item, done: event.target.checked } : item) }));
-    const text = el('input', '', { 'aria-label': 'Editar tarea' });
+    const text = el('textarea', 'todo-task-text', { 'aria-label': 'Editar tarea', rows: '1' });
     text.value = task.text;
-    text.addEventListener('input', (event) => updateObject(object.id, { tasks: tasks.map((item) => item.id === task.id ? { ...item, text: event.target.value } : item) }, false));
+    const resizeTaskInput = () => {
+      text.style.height = 'auto';
+      text.style.height = `${text.scrollHeight}px`;
+    };
+    resizeTaskInput();
+    text.addEventListener('input', (event) => {
+      resizeTaskInput();
+      updateObject(object.id, { tasks: tasks.map((item) => item.id === task.id ? { ...item, text: event.target.value } : item) }, false);
+    });
     label.append(checkbox, text);
     list.append(label);
   });
 
+  frame.style.setProperty('--todo-width', `${Math.max(TODO_MIN_WIDTH, Number(object.todoWidth) || TODO_DEFAULT_WIDTH)}px`);
+  addTodoResize(frame, object);
   frame.append(header, form, list);
   return frame;
+}
+
+function fitTodoWidthToViewport(object, requestedWidth) {
+  const current = getObjectById(object.id, object);
+  const maxWidth = Math.max(TODO_MIN_WIDTH, window.innerWidth - current.x - 8);
+  return clamp(requestedWidth, TODO_MIN_WIDTH, maxWidth);
+}
+
+function applyTodoFrameWidth(frame, width) {
+  frame.style.setProperty('--todo-width', `${width}px`);
+}
+
+function addTodoResize(frame, object) {
+  const sides = ['left', 'right'];
+  let resize = null;
+
+  const move = (event) => {
+    if (!resize) return;
+    event.preventDefault();
+    const point = getEventPoint(event);
+    const dx = point.clientX - resize.startX;
+    const requestedWidth = resize.side === 'right' ? resize.startWidth + dx : resize.startWidth - dx;
+    const nextWidth = fitTodoWidthToViewport(object, requestedWidth);
+    let nextX = resize.startXPos;
+
+    if (resize.side === 'left') {
+      const rightEdge = resize.startXPos + resize.startWidth;
+      nextX = Math.max(8, rightEdge - nextWidth);
+    }
+
+    applyTodoFrameWidth(frame, nextWidth);
+    setFrameTransform(frame, nextX, resize.startYPos);
+    updateObject(object.id, { todoWidth: nextWidth, x: nextX }, false);
+  };
+
+  const stop = () => {
+    if (!resize) return;
+    resize = null;
+    frame.classList.remove('is-resizing');
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', stop);
+    document.removeEventListener('touchmove', move);
+    document.removeEventListener('touchend', stop);
+    document.removeEventListener('touchcancel', stop);
+    persist();
+  };
+
+  const start = (side) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    bringToFront(object.id, false);
+    const point = getEventPoint(event);
+    const current = getObjectById(object.id, object);
+    resize = {
+      side,
+      startX: point.clientX,
+      startWidth: Math.max(TODO_MIN_WIDTH, Number(current.todoWidth) || TODO_DEFAULT_WIDTH),
+      startXPos: current.x,
+      startYPos: current.y
+    };
+    frame.classList.add('is-resizing');
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', stop);
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', stop);
+    document.addEventListener('touchcancel', stop);
+  };
+
+  sides.forEach((side) => {
+    const handle = el('span', `todo-resize-control ${side}`, { role: 'button', 'aria-label': `Redimensionar lista de tareas (${side})`, 'data-no-drag': true });
+    handle.addEventListener('mousedown', start(side));
+    handle.addEventListener('touchstart', start(side), { passive: false });
+    frame.append(handle);
+  });
 }
 
 
