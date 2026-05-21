@@ -449,7 +449,12 @@ function trashObjectWithAnimation(frame, object, point) {
   frame.style.opacity = '0';
 
   window.setTimeout(() => {
-    updateObject(object.id, { status: 'trashed', trashedAt: Date.now(), open: object.type === 'notebook' ? false : object.open }, true);
+    const latestObject = getObjectById(object.id, object);
+    updateObject(latestObject.id, {
+      status: 'trashed',
+      trashedAt: Date.now(),
+      open: latestObject.type === 'notebook' ? false : latestObject.open
+    }, true);
     shakeTrashCan();
     showToast('Objeto enviado a la Papelera');
   }, 420);
@@ -523,13 +528,14 @@ function makeDraggable(frame, object, options = {}) {
     const wasDragging = drag.isDragging;
     const elapsed = performance.now() - drag.startedAt;
     const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-    const droppedOnTrash = wasDragging && object.status !== 'trashed' && isPointOverTrash(event.clientX, event.clientY);
+    const latestObject = getObjectById(object.id, object);
+    const droppedOnTrash = wasDragging && latestObject.status !== 'trashed' && isPointOverTrash(event.clientX, event.clientY);
     drag = null;
     frame.classList.remove('is-dragging');
     frame.style.zIndex = '';
 
     if (droppedOnTrash) {
-      trashObjectWithAnimation(frame, object, event);
+      trashObjectWithAnimation(frame, latestObject, event);
       return;
     }
 
