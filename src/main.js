@@ -1,6 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js';
 import { browserLocalPersistence, getAuth, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const inputSelector = 'textarea, input, button, select, [contenteditable="true"], [data-no-drag]';
@@ -67,6 +68,10 @@ const firebaseConfig = {
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
+initializeAppCheck(firebaseApp, {
+  provider: new ReCaptchaV3Provider('REPLACE_WITH_RECAPTCHA_V3_SITE_KEY'), // Replace with your Firebase App Check reCAPTCHA v3 site key.
+  isTokenAutoRefreshEnabled: true
+});
 if (typeof window !== 'undefined') getAnalytics(firebaseApp);
 const firebaseAuth = getAuth(firebaseApp);
 const firestoreDb = getFirestore(firebaseApp);
