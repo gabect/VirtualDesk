@@ -539,19 +539,33 @@ button {
 }
 
 .notebook.is-open-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 940;
-  width: min(900px, calc(100vw - 48px));
-  height: calc(100vh - 64px);
-  max-height: calc(100vh - 64px);
-  transform: translate(-50%, -50%) !important;
+  position: fixed !important;
+  top: 24px !important;
+  left: 50% !important;
+  z-index: 1000;
+  width: min(900px, calc(100vw - 48px)) !important;
+  height: calc(100vh - 48px) !important;
+  max-height: calc(100vh - 48px) !important;
+  transform: translateX(-50%) !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .notebook.is-open-dialog .notebook-resize-control,
-.notebook.is-open-dialog .notebook-rotate-control {
-  display: none;
+.notebook.is-open-dialog .notebook-rotate-control,
+.notebook.is-open-dialog .drag-handle,
+.notebook.is-open-dialog .resize-handle,
+.notebook.is-open-dialog .rotate-handle {
+  display: none !important;
+}
+
+.notebook.is-open-dialog .notebook-open,
+.notebook.is-open-dialog .notebook-page,
+.notebook.is-open-dialog .notebook-page textarea {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 .notebook-open {
