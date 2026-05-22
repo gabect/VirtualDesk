@@ -1929,8 +1929,37 @@ button {
 }
 
 .notebook-cover { background: linear-gradient(140deg, rgba(30, 18, 9, .46), rgba(20, 11, 5, .26)), linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px), url('./assets/cuero.png'); background-size: cover, auto, cover; background-position: center, left top, center; background-repeat: no-repeat, no-repeat, no-repeat; }
-.notebook-open { background: linear-gradient(90deg, #92653b 0 22px, #f6ebd8 22px); }
+.notebook-open {
+  background:
+    linear-gradient(
+      rgba(255, 244, 220, 0.28),
+      rgba(194, 140, 76, 0.16)
+    ),
+    linear-gradient(90deg, rgba(146, 101, 59, 0.78) 0 22px, transparent 22px),
+    url('./assets/manila.png');
+  background-size: cover, auto, cover;
+  background-position: center, left top, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+}
 .notebook-page { background: linear-gradient(90deg, rgba(181,97,88,.35) 42px, transparent 42px), repeating-linear-gradient(0deg, transparent 0 calc(var(--notebook-page-line-height) - 1px), rgba(103,131,165,.26) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)), #fffaf0; }
+
+.notebook-toolbar,
+.page-controls {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      rgba(255, 247, 228, 0.62),
+      rgba(198, 144, 83, 0.22)
+    ),
+    url('./assets/manila.png');
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.5),
+    0 2px 6px rgba(91, 60, 31, 0.16);
+}
 
 .todo-pad {
   background: repeating-linear-gradient(0deg, transparent 0 31px, rgba(88,129,171,.16) 32px 33px), linear-gradient(135deg, #fffdf7, #efe2c4);
