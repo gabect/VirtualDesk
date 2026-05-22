@@ -284,6 +284,7 @@ function applyBackground(main) {
 
 function createDock() {
   const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
+  const dockTray = el('div', 'dock-tray');
   const buttons = [
     ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
@@ -296,8 +297,9 @@ function createDock() {
   buttons.forEach(([className, icon, label, handler]) => {
     const button = el('button', `dock-button ${className}`, { title: label, 'aria-label': label, onClick: handler });
     button.append(el('span', '', { text: icon }));
-    dock.append(button);
+    dockTray.append(button);
   });
+  dock.append(dockTray);
   return dock;
 }
 
