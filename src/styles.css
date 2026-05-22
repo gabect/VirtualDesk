@@ -472,11 +472,15 @@ button {
   overflow: hidden;
   border: 0;
   border-radius: 16px 22px 22px 16px;
-  color: #eef7ff;
+  color: #f8f3ea;
   background:
+    linear-gradient(140deg, rgba(30, 18, 9, .46), rgba(20, 11, 5, .26)),
     linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px),
-    linear-gradient(135deg, #315e8d, #1c3c68 58%, #163354);
-  box-shadow: 0 20px 34px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.18), inset -11px 0 18px rgba(255,255,255,.08);
+    url('./assets/cuero.png');
+  background-size: cover, auto, cover;
+  background-position: center, left top, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  box-shadow: 0 20px 34px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.12), inset -11px 0 18px rgba(255,255,255,.08);
   cursor: inherit;
 }
 
@@ -1788,7 +1792,7 @@ button {
   box-shadow: 0 14px 26px rgba(108, 74, 37, .23), inset 0 -11px 20px rgba(179,141,52,.17), inset 0 1px rgba(255,255,255,.65);
 }
 
-.notebook-cover { background: linear-gradient(135deg, #9d6b40, #764d2d 62%, #613b1f); }
+.notebook-cover { background: linear-gradient(140deg, rgba(30, 18, 9, .46), rgba(20, 11, 5, .26)), linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px), url('./assets/cuero.png'); background-size: cover, auto, cover; background-position: center, left top, center; background-repeat: no-repeat, no-repeat, no-repeat; }
 .notebook-open { background: linear-gradient(90deg, #92653b 0 22px, #f6ebd8 22px); }
 .notebook-page { background: linear-gradient(90deg, rgba(181,97,88,.35) 42px, transparent 42px), repeating-linear-gradient(0deg, transparent 0 calc(var(--notebook-page-line-height) - 1px), rgba(103,131,165,.26) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)), #fffaf0; }
 
