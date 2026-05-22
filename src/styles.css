@@ -528,6 +528,32 @@ button {
   height: min(82vh, 760px);
 }
 
+
+.notebook-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 930;
+  border: 0;
+  background: rgba(12, 21, 35, .28);
+  backdrop-filter: blur(1px);
+}
+
+.notebook.is-open-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 940;
+  width: min(900px, calc(100vw - 48px));
+  height: calc(100vh - 64px);
+  max-height: calc(100vh - 64px);
+  transform: translate(-50%, -50%) !important;
+}
+
+.notebook.is-open-dialog .notebook-resize-control,
+.notebook.is-open-dialog .notebook-rotate-control {
+  display: none;
+}
+
 .notebook-open {
   position: relative;
   display: grid;
@@ -657,6 +683,24 @@ button {
   box-shadow: 0 6px 14px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.9);
   touch-action: none;
   user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.notebook.closed:hover .notebook-resize-control,
+.notebook.closed:hover .notebook-rotate-control,
+.notebook.closed.is-dragging .notebook-resize-control,
+.notebook.closed.is-dragging .notebook-rotate-control,
+.notebook.closed.is-resizing .notebook-resize-control,
+.notebook.closed.is-rotating .notebook-rotate-control {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notebook.open .notebook-resize-control,
+.notebook.open .notebook-rotate-control {
+  display: none;
 }
 
 .notebook-resize-control {

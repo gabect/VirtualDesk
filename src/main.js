@@ -57,6 +57,7 @@ let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
 let cloudSaveTimer = null;
 let focusedWidgetId = null;
+let activeNotebookId = null;
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
@@ -646,6 +647,16 @@ function closeWidgetFocus() {
   render();
 }
 
+function openNotebook(id) {
+  activeNotebookId = id;
+  updateObject(id, { open: true });
+}
+
+function closeNotebook(id) {
+  if (activeNotebookId === id) activeNotebookId = null;
+  updateObject(id, { open: false });
+}
+
 function applyNotebookFrameSize(frame, object) {
   const { width, height, scale } = getNotebookDimensions(object);
   frame.style.width = `${width}px`;
@@ -865,10 +876,11 @@ function createNotebook(object) {
         canStart: (event) => !event.target.closest('[data-no-drag]'),
         dragDelay: NOTEBOOK_OPEN_CLICK_MAX_MS,
         moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD,
-        onQuickClick: () => updateObject(object.id, { open: true })
+        onQuickClick: () => openNotebook(object.id)
       };
   dragOptions.isDisabled = () => isFocused;
-  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'} ${isFocused ? 'is-focused' : ''}`, dragOptions);
+  const isDialogOpen = object.open && activeNotebookId === object.id;
+  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'} ${isDialogOpen ? 'is-open-dialog' : ''} ${isFocused ? 'is-focused' : ''}`, dragOptions);
   if (object.open && !isFocused) frame.addEventListener('dblclick', () => openWidgetFocus(object.id));
   applyNotebookFrameSize(frame, object);
   addNotebookRotation(frame, object);
@@ -878,7 +890,7 @@ function createNotebook(object) {
     cover.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
-      updateObject(object.id, { open: true });
+      openNotebook(object.id);
     });
     const title = el('span', 'cover-title', { text: getNotebookName(object), 'data-no-drag': true });
     title.addEventListener('dblclick', (event) => {
@@ -902,7 +914,7 @@ function createNotebook(object) {
   const toolbar = el('header', 'notebook-toolbar notebook-drag-zone', { title: 'Arrastra desde este margen superior para mover la libreta' });
   const close = el('button', '', { text: 'Cerrar', onClick: () => {
     if (isFocused) closeWidgetFocus();
-    updateObject(object.id, { open: false });
+    closeNotebook(object.id);
   } });
   const focusToggle = el('button', '', { text: isFocused ? 'Volver' : 'Enfocar', 'data-no-drag': true, onClick: () => (isFocused ? closeWidgetFocus() : openWidgetFocus(object.id)) });
   const title = el('strong', 'notebook-name', { text: getNotebookName(object), 'data-no-drag': true });
@@ -1733,6 +1745,9 @@ function render() {
     return;
   }
 
+  const activeOpenNotebook = state.objects.find((object) => object.type === 'notebook' && object.open && object.id === activeNotebookId);
+  if (!activeOpenNotebook) activeNotebookId = null;
+
   const main = el('main', `virtual-desk ${focusedWidgetId ? 'is-widget-focused' : ''}`);
   applyBackground(main);
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
@@ -1749,6 +1764,9 @@ function render() {
     if (object.type === 'pomodoro') layer.append(createPomodoroWidget(object));
     if (object.type === 'focusPlayer') layer.append(createFocusPlayerWidget(object));
   });
+  if (activeNotebookId) {
+    layer.append(el('button', 'notebook-modal-backdrop', { 'aria-label': 'Cerrar libreta abierta', onClick: () => closeNotebook(activeNotebookId) }));
+  }
   if (focusedWidgetId) {
     layer.append(el('button', 'desk-focus-backdrop', { 'aria-label': 'Cerrar vista enfocada', onClick: closeWidgetFocus }));
   }
