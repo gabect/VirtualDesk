@@ -1469,6 +1469,21 @@ function createLocalModeIndicator() {
   return indicator;
 }
 
+
+function createDeskBrand() {
+  const brand = el('aside', 'desk-brand', { 'aria-label': 'Marca de la aplicación' });
+  const logo = el('img', 'desk-brand-logo', {
+    src: './src/assets/zoneLOGO.png',
+    alt: 'ZONE logo',
+    loading: 'eager',
+    decoding: 'async'
+  });
+  const copy = el('div', 'desk-brand-copy');
+  copy.append(el('strong', '', { text: 'ZONE Desk' }), el('small', '', { text: 'Workspace táctil y organizado' }));
+  brand.append(logo, copy);
+  return brand;
+}
+
 function createAuthPanel() {
   const panel = el('aside', 'auth-panel', { 'aria-label': 'Estado de sesión' });
   const copy = el('div', 'auth-copy');
@@ -1686,7 +1701,7 @@ function render() {
     applyBackground(authScreen);
     const loginPanel = el('section', 'auth-screen-panel', { 'aria-label': 'Pantalla de inicio de sesión' });
     const logo = el('img', 'auth-screen-logo', {
-      src: './src/assets/zone-desk-logo.png',
+      src: './src/assets/zoneLOGO.png',
       alt: 'ZONE desk logo',
       loading: 'eager',
       decoding: 'async'
@@ -1723,7 +1738,7 @@ function render() {
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
   const widgets = el('section', 'fixed-widgets');
-  widgets.append(createAuthPanel(), createLocalModeIndicator(), createClock(), createCalendar());
+  widgets.append(createDeskBrand(), createAuthPanel(), createLocalModeIndicator(), createClock(), createCalendar());
   main.append(widgets);
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
