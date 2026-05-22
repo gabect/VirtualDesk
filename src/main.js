@@ -827,6 +827,15 @@ function getNotebookName(object) {
   return (object.name || 'Notebook').trim() || 'Notebook';
 }
 
+
+function getNotebookCategory(object) {
+  const value = `${object.name || ''} ${(object.pages || []).join(' ')}`.toLowerCase();
+  if (value.includes('work') || value.includes('trabajo')) return 'work';
+  if (value.includes('idea') || value.includes('brain')) return 'ideas';
+  if (value.includes('study') || value.includes('clase') || value.includes('learn')) return 'study';
+  return 'journal';
+}
+
 function getTodoPadName(object) {
   return (object.name || 'Today').trim() || 'Today';
 }
@@ -883,6 +892,7 @@ function createNotebook(object) {
   dragOptions.isDisabled = () => isFocused;
   const isDialogOpen = object.open && activeNotebookId === object.id;
   const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'} ${isDialogOpen ? 'is-open-dialog' : ''} ${isFocused ? 'is-focused' : ''}`, dragOptions);
+  frame.dataset.category = getNotebookCategory(object);
   if (object.open && !isFocused) frame.addEventListener('dblclick', () => openWidgetFocus(object.id));
   applyNotebookFrameSize(frame, object);
   addNotebookRotation(frame, object);
