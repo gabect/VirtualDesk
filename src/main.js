@@ -56,6 +56,7 @@ let pomodoroAudioContext = null;
 let trashDialogOpen = false;
 let pendingFocusAutoplayId = null;
 let cloudSaveTimer = null;
+let focusedWidgetId = null;
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
@@ -514,6 +515,7 @@ function makeDraggable(frame, object, options = {}) {
   };
 
   frame.addEventListener('pointerdown', (event) => {
+    if (options.isDisabled?.()) return;
     if (event.button !== undefined && event.button !== 0) return;
     if (options.canStart && !options.canStart(event)) return;
     if (!options.canStart && event.target.closest(inputSelector)) return;
@@ -628,6 +630,20 @@ function createFrame(object, className, dragOptions) {
   setFrameTransform(frame, object.x, object.y, rotation);
   makeDraggable(frame, object, dragOptions);
   return frame;
+}
+
+function isFocusedWidget(id) {
+  return focusedWidgetId === id;
+}
+
+function openWidgetFocus(id) {
+  focusedWidgetId = id;
+  render();
+}
+
+function closeWidgetFocus() {
+  focusedWidgetId = null;
+  render();
 }
 
 function applyNotebookFrameSize(frame, object) {
@@ -781,7 +797,12 @@ function addNotebookFocusRotation(frame, object, textarea) {
 }
 
 function createStickyNote(object) {
-  const frame = createFrame(object, 'sticky-note');
+  const isFocused = isFocusedWidget(object.id);
+  const frame = createFrame(object, `sticky-note ${isFocused ? 'is-focused' : ''}`, { isDisabled: () => isFocused });
+  frame.addEventListener('dblclick', () => openWidgetFocus(object.id));
+  if (isFocused) {
+    frame.append(el('button', 'widget-focus-close', { text: 'Cerrar', 'aria-label': 'Cerrar vista ampliada', 'data-no-drag': true, onClick: closeWidgetFocus }));
+  }
   const textarea = el('textarea', '', { placeholder: 'Escribe una nota...', 'aria-label': 'Contenido de nota adhesiva' });
   textarea.value = object.content || '';
   textarea.addEventListener('input', (event) => updateObject(object.id, { content: event.target.value }, false));
@@ -837,6 +858,7 @@ function enableNotebookRename({ trigger, object, getLabel, onCancel }) {
 }
 
 function createNotebook(object) {
+  const isFocused = isFocusedWidget(object.id);
   const dragOptions = object.open
     ? { canStart: isOpenNotebookDragZone, moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD }
     : {
@@ -845,7 +867,9 @@ function createNotebook(object) {
         moveThreshold: NOTEBOOK_DRAG_MOVE_THRESHOLD,
         onQuickClick: () => updateObject(object.id, { open: true })
       };
-  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'}`, dragOptions);
+  dragOptions.isDisabled = () => isFocused;
+  const frame = createFrame(object, `notebook ${object.open ? 'open' : 'closed'} ${isFocused ? 'is-focused' : ''}`, dragOptions);
+  if (object.open && !isFocused) frame.addEventListener('dblclick', () => openWidgetFocus(object.id));
   applyNotebookFrameSize(frame, object);
   addNotebookRotation(frame, object);
   addNotebookResize(frame, object);
@@ -876,7 +900,11 @@ function createNotebook(object) {
 
   const wrap = el('div', 'notebook-open');
   const toolbar = el('header', 'notebook-toolbar notebook-drag-zone', { title: 'Arrastra desde este margen superior para mover la libreta' });
-  const close = el('button', '', { text: 'Cerrar', onClick: () => updateObject(object.id, { open: false }) });
+  const close = el('button', '', { text: 'Cerrar', onClick: () => {
+    if (isFocused) closeWidgetFocus();
+    updateObject(object.id, { open: false });
+  } });
+  const focusToggle = el('button', '', { text: isFocused ? 'Volver' : 'Enfocar', 'data-no-drag': true, onClick: () => (isFocused ? closeWidgetFocus() : openWidgetFocus(object.id)) });
   const title = el('strong', 'notebook-name', { text: getNotebookName(object), 'data-no-drag': true });
   title.addEventListener('dblclick', (event) => {
     event.preventDefault();
@@ -890,7 +918,7 @@ function createNotebook(object) {
       }
     });
   });
-  toolbar.append(close, title, el('span', '', { text: `Página ${(object.activePage || 0) + 1} / ${(object.pages || ['']).length}` }));
+  toolbar.append(close, focusToggle, title, el('span', '', { text: `Página ${(object.activePage || 0) + 1} / ${(object.pages || ['']).length}` }));
 
   const page = el('div', `notebook-page ${object.flipDirection === 'prev' ? 'flip-back' : 'flip-next'}`);
   const textarea = el('textarea', '', { placeholder: 'Nueva página...', 'aria-label': 'Página editable de libreta' });
@@ -926,7 +954,9 @@ function turnNotebookPage(id, direction) {
 }
 
 function createTodoList(object) {
-  const frame = createFrame(object, 'todo-pad');
+  const isFocused = isFocusedWidget(object.id);
+  const frame = createFrame(object, `todo-pad ${isFocused ? 'is-focused' : ''}`, { isDisabled: () => isFocused });
+  frame.addEventListener('dblclick', () => openWidgetFocus(object.id));
   const tasks = object.tasks || [];
   const header = el('header');
   const title = el('span', 'todo-pad-title', { text: getTodoPadName(object), 'data-no-drag': true });
@@ -944,7 +974,8 @@ function createTodoList(object) {
       onCancel: () => render()
     });
   });
-  header.append(title, el('small', '', { text: `${tasks.filter((task) => task.done).length}/${tasks.length}` }));
+  const focusToggle = el('button', 'widget-focus-toggle', { text: isFocused ? 'Volver' : 'Abrir', 'aria-label': 'Alternar vista ampliada', 'data-no-drag': true, onClick: () => (isFocused ? closeWidgetFocus() : openWidgetFocus(object.id)) });
+  header.append(title, el('small', '', { text: `${tasks.filter((task) => task.done).length}/${tasks.length}` }), focusToggle);
 
   const form = el('form', 'todo-add');
   const draft = el('input', '', { placeholder: 'Añadir tarea', 'aria-label': 'Nueva tarea' });
@@ -1687,7 +1718,7 @@ function render() {
     return;
   }
 
-  const main = el('main', 'virtual-desk');
+  const main = el('main', `virtual-desk ${focusedWidgetId ? 'is-widget-focused' : ''}`);
   applyBackground(main);
   main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
@@ -1703,6 +1734,9 @@ function render() {
     if (object.type === 'pomodoro') layer.append(createPomodoroWidget(object));
     if (object.type === 'focusPlayer') layer.append(createFocusPlayerWidget(object));
   });
+  if (focusedWidgetId) {
+    layer.append(el('button', 'desk-focus-backdrop', { 'aria-label': 'Cerrar vista enfocada', onClick: closeWidgetFocus }));
+  }
   main.append(layer);
   if (trashDialogOpen) main.append(createTrashDialog());
   main.append(el('div', 'toast', { role: 'status', hidden: true }));
