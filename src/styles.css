@@ -2070,12 +2070,24 @@ button {
 .dock-button span{ font-size:20px; filter:none; }
 
 .settings-overlay{ position:fixed; inset:0; z-index:1800; display:grid; place-items:center; padding:16px; background:rgba(12,16,24,0.24); backdrop-filter: blur(10px); }
-.settings-panel{ box-sizing:border-box; position:relative; width:min(420px,calc(100vw - 32px)); max-width:100%; max-height:calc(100dvh - 32px); overflow:auto; padding:14px; border:1px solid var(--ui-border); background:var(--ui-panel); border-radius:8px; display:grid; gap:10px; }
-.settings-panel *{ box-sizing:border-box; }
+.settings-panel{ box-sizing:border-box; position:relative; width:min(420px,calc(100vw - 32px)); max-width:100%; max-height:calc(100dvh - 32px); overflow-y:auto; overflow-x:hidden; padding:14px; border:1px solid var(--ui-border); background:var(--ui-panel); border-radius:8px; display:grid; gap:10px; }
+.settings-panel,
+.settings-panel *{ box-sizing:border-box; min-width:0; }
 .settings-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding-bottom:10px; border-bottom:1px solid var(--ui-border); }
 .settings-close{ border:1px solid var(--ui-border); background:#fff; border-radius:6px; width:30px; height:30px; flex:0 0 auto; }
 .settings-row{ display:block; font-size:12px; color:rgba(17,19,24,.78); margin:0; }
 .settings-panel select,.settings-panel input,.settings-panel button{ width:100%; max-width:100%; border:1px solid var(--ui-border); border-radius:6px; min-height:34px; background:#fff; box-shadow:none; }
+.settings-panel > *{ width:100%; max-width:100%; }
+.settings-panel .background-panel{ display:grid; gap:8px; width:100%; max-width:100%; padding:10px; overflow-x:hidden; }
+.settings-panel .background-panel div:first-child{ min-width:0; width:100%; }
+.settings-panel .background-panel form{ display:flex; flex-wrap:wrap; gap:8px; width:100%; max-width:100%; }
+.settings-panel .background-panel input[type="url"]{ flex:1 1 220px; width:100%; max-width:100%; min-width:0; }
+.settings-panel .background-panel input[type="color"]{ flex:0 0 44px; width:44px; max-width:100%; }
+.settings-panel .background-panel button{ flex:1 1 120px; width:100%; max-width:100%; min-width:0; }
+.settings-panel .auth-panel,
+.settings-panel .local-mode-indicator{ width:100%; max-width:100%; overflow-x:hidden; }
+.settings-panel .auth-panel{ display:grid; gap:8px; }
+.settings-panel .auth-panel > *{ width:100%; max-width:100%; min-width:0; }
 .background-panel{ position:static; max-width:100%; border:1px solid var(--ui-border); border-radius:8px; box-shadow:none; background:#fff; }
 .auth-panel,.local-mode-indicator{ border:1px solid var(--ui-border); border-radius:8px; box-shadow:none; background:#fff; }
 
