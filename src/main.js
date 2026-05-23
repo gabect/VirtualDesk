@@ -1573,9 +1573,15 @@ function createAuthPanel() {
 }
 
 function createSettingsPanel() {
-  const panel = el('section', 'settings-panel', { role: 'dialog', 'aria-label': 'Configuración', 'aria-modal': 'false' });
+  const closeSettings = () => {
+    settingsOpen = false;
+    render();
+  };
+
+  const overlay = el('section', 'settings-overlay', { 'aria-label': 'Settings overlay' });
+  const panel = el('section', 'settings-panel', { role: 'dialog', 'aria-label': 'Configuración', 'aria-modal': 'true', tabindex: '-1' });
   const header = el('header', 'settings-header');
-  header.append(el('strong', '', { text: 'Settings' }), el('button', 'settings-close', { type: 'button', text: '×', onClick: () => { settingsOpen = false; render(); } }));
+  header.append(el('strong', '', { text: 'Settings' }), el('button', 'settings-close', { type: 'button', text: '×', 'aria-label': 'Close settings', onClick: closeSettings }));
 
   const styleSelect = el('select', '', { 'aria-label': 'Style' });
   styleSelect.append(el('option', '', { value: 'default', text: 'Default' }));
@@ -1583,7 +1589,7 @@ function createSettingsPanel() {
   styleSelect.addEventListener('change', (event) => setUiPrefs({ style: event.target.value }));
 
   const dockSelect = el('select', '', { 'aria-label': 'Dock Position' });
-  [['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']].forEach(([value, label]) => dockSelect.append(el('option','',{value,text:label})));
+  [['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['bottom', 'Bottom']].forEach(([value, label]) => dockSelect.append(el('option', '', { value, text: label })));
   dockSelect.value = uiPrefs.dockPosition;
   dockSelect.addEventListener('change', (event) => setUiPrefs({ dockPosition: event.target.value }));
 
@@ -1593,7 +1599,21 @@ function createSettingsPanel() {
   const authPanel = createAuthPanel();
   const sync = createLocalModeIndicator();
   panel.append(header, el('label', 'settings-row', { text: 'Style' }), styleSelect, el('label', 'settings-row', { text: 'Dock Position' }), dockSelect, backgroundPanel, sync, authPanel);
-  return panel;
+
+  overlay.addEventListener('pointerdown', (event) => {
+    if (event.target === overlay) closeSettings();
+  });
+
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSettings();
+    }
+  });
+
+  overlay.append(panel);
+  window.requestAnimationFrame(() => panel.focus());
+  return overlay;
 }
 
 function createClock() {
