@@ -1738,7 +1738,14 @@ function createTrashCan() {
       render();
     }
   });
-  button.append(el('span', 'trash-lid'), el('span', 'trash-body'), el('span', 'trash-papers'));
+  button.append(el('span', 'trash-icon', {
+    html: `
+      <svg class="trash-icon-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path class="trash-lid" d="M12 10 L52 6" />
+        <path class="trash-body" d="M10 14 L54 14 L45 58 L19 58 Z" />
+      </svg>
+    `
+  }));
   return button;
 }
 
