@@ -107,6 +107,12 @@ const defaultState = {
 
 let state = structuredClone(defaultState);
 
+const UI_PREFS_KEY = 'zoneDeskUiPrefsV1';
+const defaultUiPrefs = { style: 'default', dockPosition: 'left' };
+let uiPrefs = loadUiPrefs();
+let settingsOpen = false;
+
+
 function normalizeObject(object) {
   const baseObject = { status: 'active', ...object };
   if (baseObject?.type === 'pomodoro') return normalizePomodoro(baseObject);
@@ -158,6 +164,31 @@ function removeUndefinedDeep(value) {
   return value;
 }
 
+
+
+function loadUiPrefs() {
+  try {
+    const raw = window.localStorage.getItem(UI_PREFS_KEY);
+    if (!raw) return { ...defaultUiPrefs };
+    const parsed = JSON.parse(raw);
+    return {
+      style: parsed?.style === 'default' ? 'default' : defaultUiPrefs.style,
+      dockPosition: ['left', 'right', 'top', 'bottom'].includes(parsed?.dockPosition) ? parsed.dockPosition : defaultUiPrefs.dockPosition
+    };
+  } catch {
+    return { ...defaultUiPrefs };
+  }
+}
+
+function saveUiPrefs() {
+  window.localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs));
+}
+
+function setUiPrefs(patch) {
+  uiPrefs = { ...uiPrefs, ...(typeof patch === 'function' ? patch(uiPrefs) : patch) };
+  saveUiPrefs();
+  render();
+}
 
 function persist() {
   scheduleCloudSave();
@@ -283,7 +314,7 @@ function applyBackground(main) {
 }
 
 function createDock() {
-  const dock = el('nav', 'dock', { 'aria-label': 'Herramientas del escritorio' });
+  const dock = el('nav', `dock dock-${uiPrefs.dockPosition}`, { 'aria-label': 'Herramientas del escritorio' });
   const dockTray = el('div', 'dock-tray');
   const buttons = [
     ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
@@ -291,7 +322,7 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', name: 'Today', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
+    ['settings-icon', '⚙️', 'Configuración', () => { settingsOpen = true; render(); }]
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
@@ -1541,6 +1572,30 @@ function createAuthPanel() {
   return panel;
 }
 
+function createSettingsPanel() {
+  const panel = el('section', 'settings-panel', { role: 'dialog', 'aria-label': 'Configuración', 'aria-modal': 'false' });
+  const header = el('header', 'settings-header');
+  header.append(el('strong', '', { text: 'Settings' }), el('button', 'settings-close', { type: 'button', text: '×', onClick: () => { settingsOpen = false; render(); } }));
+
+  const styleSelect = el('select', '', { 'aria-label': 'Style' });
+  styleSelect.append(el('option', '', { value: 'default', text: 'Default' }));
+  styleSelect.value = uiPrefs.style;
+  styleSelect.addEventListener('change', (event) => setUiPrefs({ style: event.target.value }));
+
+  const dockSelect = el('select', '', { 'aria-label': 'Dock Position' });
+  [['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']].forEach(([value, label]) => dockSelect.append(el('option','',{value,text:label})));
+  dockSelect.value = uiPrefs.dockPosition;
+  dockSelect.addEventListener('change', (event) => setUiPrefs({ dockPosition: event.target.value }));
+
+  const backgroundPanel = createBackgroundPanel();
+  backgroundPanel.classList.add('inside-settings');
+
+  const authPanel = createAuthPanel();
+  const sync = createLocalModeIndicator();
+  panel.append(header, el('label', 'settings-row', { text: 'Style' }), styleSelect, el('label', 'settings-row', { text: 'Dock Position' }), dockSelect, backgroundPanel, sync, authPanel);
+  return panel;
+}
+
 function createClock() {
   window.clearInterval(clockTimer);
   const clock = el('aside', 'retro-clock', { 'aria-label': 'Reloj digital' });
@@ -1760,13 +1815,11 @@ function render() {
   const activeOpenNotebook = state.objects.find((object) => object.type === 'notebook' && object.open && object.id === activeNotebookId);
   if (!activeOpenNotebook) activeNotebookId = null;
 
-  const main = el('main', `virtual-desk ${focusedWidgetId ? 'is-widget-focused' : ''}`);
+  const main = el('main', `virtual-desk style-${uiPrefs.style} docked-${uiPrefs.dockPosition} ${focusedWidgetId ? 'is-widget-focused' : ''}`);
   applyBackground(main);
-  main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
+  main.append(el('div', 'ambient-glow'), createDock(), createTrashCan(), createDeskBrand());
 
-  const widgets = el('section', 'fixed-widgets');
-  widgets.append(createDeskBrand(), createAuthPanel(), createLocalModeIndicator(), createClock(), createCalendar());
-  main.append(widgets);
+  if (settingsOpen) main.append(createSettingsPanel());
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
   getActiveObjects().forEach((object) => {
