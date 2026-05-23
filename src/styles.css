@@ -2039,3 +2039,50 @@ button {
 .notebook[data-category="ideas"] .notebook-cover { --cover-tint: rgba(44, 67, 48, .30); }
 .notebook[data-category="journal"] .notebook-cover { --cover-tint: rgba(78, 44, 33, .30); }
 .notebook[data-category="study"] .notebook-cover { --cover-tint: rgba(46, 58, 75, .32); }
+
+/* 2026 minimal redesign */
+:root {
+  --ui-bg: #f8f9fb;
+  --ui-text: #111318;
+  --ui-border: rgba(17, 19, 24, 0.16);
+  --ui-panel: rgba(255,255,255,0.94);
+  --ui-overlay: rgba(12,16,24,0.2);
+}
+.virtual-desk { color: var(--ui-text); }
+.virtual-desk::before,.ambient-glow{ display:none; }
+.desk-brand { position: fixed; top: 12px; left: 18px; z-index: 80; display:flex; align-items:center; gap:8px; padding:4px 8px; border:1px solid var(--ui-border); background:var(--ui-panel); border-radius:8px; }
+.desk-brand-logo { width:18px; height:18px; object-fit:contain; }
+.desk-brand-copy strong{ font-size:13px; font-weight:600; }
+.desk-brand-copy small{ display:none; }
+
+.dock { z-index:70; transform:none; }
+.dock-left{ left:12px; top:56px; bottom:12px; display:flex; align-items:center; }
+.dock-right{ right:12px; left:auto; top:56px; bottom:12px; display:flex; align-items:center; }
+.dock-top{ top:12px; left:50%; transform:translateX(-50%); }
+.dock-bottom{ bottom:12px; left:50%; top:auto; transform:translateX(-50%); }
+.dock-tray { display:flex; gap:8px; padding:8px; border-radius:10px; border:1px solid var(--ui-border); background:var(--ui-panel); box-shadow:none; }
+.dock-left .dock-tray,.dock-right .dock-tray{ flex-direction:column; }
+.dock-top .dock-tray,.dock-bottom .dock-tray{ flex-direction:row; }
+.dock-button { width:40px; height:40px; border-radius:8px; border:1px solid var(--ui-border); background:#fff; box-shadow:none; }
+.dock-button span{ font-size:20px; filter:none; }
+
+.settings-panel{ position:fixed; right:16px; top:56px; z-index:90; width:min(320px,calc(100vw - 32px)); padding:12px; border:1px solid var(--ui-border); background:var(--ui-panel); border-radius:10px; display:grid; gap:8px; }
+.settings-header{ display:flex; justify-content:space-between; align-items:center; }
+.settings-close{ border:1px solid var(--ui-border); background:#fff; border-radius:6px; width:30px; height:30px; }
+.settings-panel select,.settings-panel input,.settings-panel button{ border:1px solid var(--ui-border); border-radius:6px; min-height:34px; background:#fff; box-shadow:none; }
+.background-panel{ position:static; max-width:100%; border:1px solid var(--ui-border); border-radius:8px; box-shadow:none; background:#fff; }
+.auth-panel,.local-mode-indicator{ border:1px solid var(--ui-border); border-radius:8px; box-shadow:none; background:#fff; }
+
+.virtual-desk.docked-left .object-layer{ padding-left:72px; }
+.virtual-desk.docked-right .object-layer{ padding-right:72px; }
+.virtual-desk.docked-top .object-layer{ padding-top:72px; }
+.virtual-desk.docked-bottom .object-layer{ padding-bottom:72px; }
+
+.retro-clock,.mini-calendar,.fixed-widgets{ display:none !important; }
+
+.desk-focus-backdrop,.notebook-modal-backdrop{ backdrop-filter: blur(8px); background:var(--ui-overlay); }
+.virtual-desk.is-widget-focused .sticky-note.is-focused,
+.virtual-desk.is-widget-focused .todo-pad.is-focused,
+.virtual-desk.is-widget-focused .notebook.is-focused{ position:fixed !important; left:50% !important; top:50% !important; transform:translate(-50%,-50%) !important; width:min(92vw,980px) !important; height:min(86vh,760px) !important; max-width:92vw; max-height:86vh; z-index:1600 !important; border:1px solid var(--ui-border); border-radius:10px; box-shadow:none; }
+
+.widget-focus-close,.widget-focus-toggle,.todo-add button,.auth-action{ border-radius:6px; box-shadow:none; background:#fff; }
