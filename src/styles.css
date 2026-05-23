@@ -530,23 +530,17 @@ button {
 }
 
 .notebook-cover {
-  --cover-tint: rgba(59,35,20,.30);
+  --cover-tint: rgba(17, 19, 24, .04);
   position: relative;
   display: block;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border: 0;
-  border-radius: 16px 22px 22px 16px;
-  color: #f8f3ea;
-  background:
-    linear-gradient(140deg, var(--cover-tint), rgba(20, 11, 5, .24)),
-    linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px),
-    url('./assets/cuero.png');
-  background-size: cover, auto, cover;
-  background-position: center, left top, center;
-  background-repeat: no-repeat, no-repeat, no-repeat;
-  box-shadow: 0 20px 34px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.12), inset -11px 0 18px rgba(255,255,255,.08);
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  color: var(--ui-text);
+  background: #fff;
+  box-shadow: none;
   cursor: inherit;
 }
 
@@ -557,10 +551,10 @@ button {
 
 .spiral {
   position: absolute;
-  inset: 18px auto 18px 12px;
-  width: 18px;
-  background: repeating-linear-gradient(0deg, #d7dde7 0 8px, transparent 8px 19px);
-  filter: drop-shadow(1px 0 2px rgba(0,0,0,.32));
+  inset: 14px auto 14px 12px;
+  width: 1px;
+  background: var(--ui-border);
+  filter: none;
 }
 
 .cover-title,
@@ -570,16 +564,16 @@ button {
 }
 
 .cover-title {
-  margin-top: 86px;
-  font-family: Georgia, serif;
-  font-size: calc(31px * var(--notebook-scale));
-  font-weight: 800;
+  margin-top: 90px;
+  font-family: inherit;
+  font-size: calc(22px * var(--notebook-scale));
+  font-weight: 700;
 }
 
 .cover-subtitle {
-  margin-top: 16px;
-  opacity: .7;
-  font-size: calc(13px * var(--notebook-scale));
+  margin-top: 12px;
+  opacity: .72;
+  font-size: calc(11px * var(--notebook-scale));
   letter-spacing: calc(1px * var(--notebook-scale));
   text-transform: uppercase;
 }
@@ -640,12 +634,11 @@ button {
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
   height: 100%;
-  padding: 14px;
-  border-radius: 18px;
-  background:
-    linear-gradient(90deg, rgba(113,84,52,.35) 0 24px, transparent 24px),
-    linear-gradient(165deg, #efe0bf, #e5d0aa 62%, #d7bc90);
-  box-shadow: 0 22px 38px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.5);
+  padding: 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: none;
 }
 
 .notebook.open {
@@ -656,9 +649,10 @@ button {
   content: "";
   position: absolute;
   z-index: 2;
-  inset: 16px auto 16px 8px;
-  width: 28px;
-  border-radius: 999px;
+  inset: 10px auto 10px 10px;
+  width: 1px;
+  background: var(--ui-border);
+  border-radius: 0;
   cursor: grab;
 }
 
@@ -677,7 +671,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-left: 22px;
+  margin-left: 8px;
 }
 
 .notebook-toolbar {
@@ -709,18 +703,16 @@ button {
 .notebook-page {
   --notebook-page-line-height: clamp(24px, calc(28px * var(--notebook-scale)), 30px);
   min-height: 0;
-  margin-left: 22px;
+  margin-left: 8px;
   overflow: hidden;
-  border-radius: 7px 14px 14px 7px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
   background:
-    linear-gradient(90deg, rgba(153,95,78,.28) 44px, transparent 44px),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 calc(var(--notebook-page-line-height) - 1px),
-      rgba(74,130,181,.28) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)
-    ),
-    #fffaf0;
-  box-shadow: inset 6px 0 10px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.12);
+    linear-gradient(90deg, rgba(17, 19, 24, .18) 36px, transparent 36px),
+    linear-gradient(180deg, transparent 34%, rgba(17, 19, 24, .28) 34%, rgba(17, 19, 24, .28) 35%, transparent 35%),
+    linear-gradient(180deg, transparent 66%, rgba(17, 19, 24, .28) 66%, rgba(17, 19, 24, .28) 67%, transparent 67%),
+    #fff;
+  box-shadow: none;
   transform-origin: left center;
   animation: pageFlip .42s ease;
 }
@@ -733,14 +725,14 @@ button {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 24px 24px 18px 58px;
+  padding: 16px 16px 12px 46px;
   border: 0;
   outline: 0;
   resize: none;
-  color: #253044;
+  color: var(--ui-text);
   background: transparent;
-  font-family: "Patrick Hand", cursive;
-  font-size: clamp(16px, calc(23px * var(--notebook-scale)), 24px);
+  font-family: inherit;
+  font-size: clamp(15px, calc(19px * var(--notebook-scale)), 20px);
   line-height: var(--notebook-page-line-height);
 }
 
@@ -759,10 +751,10 @@ button {
   z-index: 4;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, .72);
-  color: #183451;
-  background: linear-gradient(#ffffff, #d9e4ef);
-  box-shadow: 0 6px 14px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.9);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  background: #fff;
+  box-shadow: none;
   touch-action: none;
   user-select: none;
   opacity: 0;
@@ -798,7 +790,7 @@ button {
   content: "";
   width: 12px;
   height: 12px;
-  background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(24,52,81,.75) 3px 5px);
+  background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(17, 19, 24, .72) 3px 4px);
 }
 
 .notebook-rotate-control {
@@ -817,7 +809,7 @@ button {
 }
 
 .notebook.is-writing {
-  filter: drop-shadow(0 18px 24px rgba(0,0,0,.22));
+  filter: none;
 }
 
 @keyframes pageFlip {
@@ -1919,38 +1911,13 @@ button {
   box-shadow: 0 14px 26px rgba(108, 74, 37, .23), inset 0 -11px 20px rgba(179,141,52,.17), inset 0 1px rgba(255,255,255,.65);
 }
 
-.notebook-cover {
-  --cover-tint: rgba(59,35,20,.30); background: linear-gradient(140deg, rgba(30, 18, 9, .46), rgba(20, 11, 5, .26)), linear-gradient(90deg, rgba(0,0,0,.28) 0 19px, transparent 19px), url('./assets/cuero.png'); background-size: cover, auto, cover; background-position: center, left top, center; background-repeat: no-repeat, no-repeat, no-repeat; }
-.notebook-open {
-  background:
-    linear-gradient(
-      rgba(255, 244, 220, 0.28),
-      rgba(194, 140, 76, 0.16)
-    ),
-    linear-gradient(90deg, rgba(146, 101, 59, 0.78) 0 22px, transparent 22px),
-    url('./assets/manila.png');
-  background-size: cover, auto, cover;
-  background-position: center, left top, center;
-  background-repeat: no-repeat, no-repeat, no-repeat;
-}
-.notebook-page { background: linear-gradient(90deg, rgba(181,97,88,.35) 42px, transparent 42px), repeating-linear-gradient(0deg, transparent 0 calc(var(--notebook-page-line-height) - 1px), rgba(103,131,165,.26) var(--notebook-page-line-height) calc(var(--notebook-page-line-height) + 1px)), #fffaf0; }
-
 .notebook-toolbar,
 .page-controls {
-  padding: 8px 10px;
-  border-radius: 12px;
-  background:
-    linear-gradient(
-      rgba(255, 247, 228, 0.62),
-      rgba(198, 144, 83, 0.22)
-    ),
-    url('./assets/manila.png');
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, 0.5),
-    0 2px 6px rgba(91, 60, 31, 0.16);
+  padding: 4px 6px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: none;
 }
 
 .todo-pad {
@@ -1985,10 +1952,10 @@ button {
 .desk-brand-copy strong { font-size: 13px; letter-spacing: .03em; color: #513620; }
 .desk-brand-copy small { font-size: 11px; color: #6f4e30; }
 
-.notebook[data-category="work"] .notebook-cover { --cover-tint: rgba(43, 36, 76, .34); }
-.notebook[data-category="ideas"] .notebook-cover { --cover-tint: rgba(44, 67, 48, .30); }
-.notebook[data-category="journal"] .notebook-cover { --cover-tint: rgba(78, 44, 33, .30); }
-.notebook[data-category="study"] .notebook-cover { --cover-tint: rgba(46, 58, 75, .32); }
+.notebook[data-category="work"] .notebook-cover,
+.notebook[data-category="ideas"] .notebook-cover,
+.notebook[data-category="journal"] .notebook-cover,
+.notebook[data-category="study"] .notebook-cover { --cover-tint: rgba(17, 19, 24, .04); }
 
 /* 2026 minimal redesign */
 :root {
