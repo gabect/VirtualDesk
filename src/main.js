@@ -58,8 +58,6 @@ let pendingFocusAutoplayId = null;
 let cloudSaveTimer = null;
 let focusedWidgetId = null;
 let activeNotebookId = null;
-let mobileWidgetsOpen = false;
-let settingsPanelOpen = false;
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBWEd7-QyMFKoovtdyWHICymP8-9KH2Djk',
@@ -293,7 +291,7 @@ function createDock() {
     ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', name: 'Today', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
     ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
     ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['settings-icon', '⚙️', 'Configuración', () => { settingsPanelOpen = !settingsPanelOpen; render(); }]
+    ['settings-icon', '⚙️', 'Configuración', () => showToast('Configuración: Coming Soon')]
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
@@ -516,7 +514,6 @@ function makeDraggable(frame, object, options = {}) {
     clearHoldTimer();
     drag.isDragging = true;
     frame.classList.add('is-dragging');
-    document.body.classList.add('is-dragging-object');
     if (event?.cancelable) event.preventDefault();
   };
 
@@ -574,7 +571,6 @@ function makeDraggable(frame, object, options = {}) {
     const droppedOnTrash = wasDragging && latestObject.status !== 'trashed' && isPointOverTrash(event.clientX, event.clientY);
     drag = null;
     frame.classList.remove('is-dragging');
-    document.body.classList.remove('is-dragging-object');
     frame.style.zIndex = '';
 
     if (droppedOnTrash) {
@@ -602,7 +598,6 @@ function makeDraggable(frame, object, options = {}) {
       drag = null;
       frame.classList.remove('is-dragging');
       frame.style.zIndex = '';
-      document.body.classList.remove('is-dragging-object');
       setTrashDropFeedback(false);
     }
   });
@@ -1767,23 +1762,11 @@ function render() {
 
   const main = el('main', `virtual-desk ${focusedWidgetId ? 'is-widget-focused' : ''}`);
   applyBackground(main);
-  main.append(el('div', 'ambient-glow'), createDock(), createTrashCan());
+  main.append(el('div', 'ambient-glow'), createDock(), createBackgroundPanel(), createTrashCan());
 
-  const widgetsToggle = el('button', 'widgets-toggle', {
-    type: 'button',
-    'aria-label': 'Abrir panel lateral',
-    text: '☰ Panel',
-    onClick: () => {
-      mobileWidgetsOpen = !mobileWidgetsOpen;
-      render();
-    }
-  });
-  main.append(widgetsToggle);
-
-  const widgets = el('section', `fixed-widgets ${mobileWidgetsOpen ? 'is-open' : ''}`);
+  const widgets = el('section', 'fixed-widgets');
   widgets.append(createDeskBrand(), createAuthPanel(), createLocalModeIndicator(), createClock(), createCalendar());
   main.append(widgets);
-  if (settingsPanelOpen) main.append(createBackgroundPanel());
 
   const layer = el('section', 'object-layer', { 'aria-label': 'Objetos arrastrables del escritorio' });
   getActiveObjects().forEach((object) => {
