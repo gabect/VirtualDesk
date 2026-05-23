@@ -82,7 +82,7 @@ let currentUser = null;
 let cloudSyncStatus = 'signed-out';
 
 const defaultState = {
-  background: { mode: 'color', value: '#5e789a' },
+  background: { mode: 'color', value: '#f2f2ef' },
   objects: [
     {
       id: 'welcome-notebook',
@@ -313,21 +313,35 @@ function applyBackground(main) {
   }
 }
 
+function createDockIcon(iconKey) {
+  const icons = {
+    notebook: '<path d="M18 8h20a4 4 0 0 1 4 4v40H18a4 4 0 0 0-4 4V12a4 4 0 0 1 4-4Z"/><path d="M18 8v48"/><path d="M24 16h12M24 24h12"/>',
+    sticky: '<rect x="14" y="12" width="36" height="36" rx="2"/><path d="M38 48V34h12"/>',
+    todo: '<rect x="12" y="10" width="40" height="44" rx="3"/><path d="M22 22l4 4 7-8M22 34h20M22 42h16"/>',
+    pomodoro: '<circle cx="32" cy="34" r="16"/><path d="M32 34V24M32 34l8 4M24 10h16M28 6h8"/>',
+    focus: '<path d="M18 36a14 14 0 0 1 28 0"/><rect x="14" y="34" width="8" height="12" rx="3"/><rect x="42" y="34" width="8" height="12" rx="3"/><path d="M32 46v6"/>',
+    settings: '<circle cx="32" cy="32" r="7"/><path d="M32 12v6M32 46v6M12 32h6M46 32h6M18.5 18.5l4.2 4.2M41.3 41.3l4.2 4.2M45.5 18.5l-4.2 4.2M22.7 41.3l-4.2 4.2"/>'
+  };
+  const svg = el('svg', 'dock-icon-svg', { viewBox: '0 0 64 64', 'aria-hidden': 'true', focusable: 'false' });
+  svg.innerHTML = icons[iconKey] || icons.notebook;
+  return svg;
+}
+
 function createDock() {
   const dock = el('nav', `dock dock-${uiPrefs.dockPosition}`, { 'aria-label': 'Herramientas del escritorio' });
   const dockTray = el('div', 'dock-tray');
   const buttons = [
-    ['notebook-icon', '📓', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
-    ['sticky-icon', '🗒️', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
-    ['todo-icon', '☑️', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', name: 'Today', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
-    ['pomodoro-icon', '⏱️', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
-    ['focus-player-icon', '🎧', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
-    ['settings-icon', '⚙️', 'Configuración', () => { settingsOpen = true; render(); }]
+    ['notebook-icon', 'notebook', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
+    ['sticky-icon', 'sticky', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
+    ['todo-icon', 'todo', 'Crear lista de tareas', () => addObject({ id: makeId('todo'), type: 'todo', name: 'Today', status: 'active', ...placeObject(76), tasks: [], todoWidth: TODO_DEFAULT_WIDTH })],
+    ['pomodoro-icon', 'pomodoro', 'Crear timer Pomodoro', () => addObject(createPomodoroObject(placeObject(108)))],
+    ['focus-player-icon', 'focus', 'Crear reproductor Focus Player', () => addObject(createFocusPlayerObject(placeObject(142)))],
+    ['settings-icon', 'settings', 'Configuración', () => { settingsOpen = true; render(); }]
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
     const button = el('button', `dock-button ${className}`, { title: label, 'aria-label': label, onClick: handler });
-    button.append(el('span', '', { text: icon }));
+    button.append(createDockIcon(icon));
     dockTray.append(button);
   });
   dock.append(dockTray);
@@ -341,7 +355,7 @@ function createBackgroundPanel() {
   copy.append(el('span', '', { text: state.background.mode === 'image' ? 'Imagen personalizada' : 'Color de escritorio' }));
 
   const colorLabel = el('label', 'color-control');
-  const color = el('input', '', { type: 'color', value: state.background.mode === 'color' ? state.background.value : '#5e789a', 'aria-label': 'Elegir color de fondo' });
+  const color = el('input', '', { type: 'color', value: state.background.mode === 'color' ? state.background.value : '#f2f2ef', 'aria-label': 'Elegir color de fondo' });
   color.addEventListener('input', (event) => setState((current) => ({ ...current, background: { mode: 'color', value: event.target.value } })));
   colorLabel.append(color);
 
@@ -948,7 +962,7 @@ function createNotebook(object) {
         }
       });
     });
-    cover.append(el('span', 'spiral'), title, el('span', 'cover-subtitle', { text: 'click to open' }));
+    cover.append(el('span', 'spiral'), title, el('span', 'cover-subtitle', { text: 'Open' }));
     frame.append(cover);
     return frame;
   }
