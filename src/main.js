@@ -322,7 +322,13 @@ function createDockIcon(iconKey) {
     focus: '<path d="M20 18v28M30 18v28M38 18l12 14-12 14z"/>',
     settings: '<rect x="16" y="20" width="32" height="30"/><path d="M26 14h12v6H26zM16 33h32M29 30h6v6h-6z"/>'
   };
-  const svg = el('svg', 'dock-icon-svg', { viewBox: '0 0 64 64', 'aria-hidden': 'true', focusable: 'false' });
+  const svg = el('svg', 'dock-icon-svg', {
+    viewBox: '0 0 64 64',
+    'aria-hidden': 'true',
+    focusable: 'false',
+    fill: 'none',
+    stroke: 'currentColor'
+  });
   svg.innerHTML = icons[iconKey] || icons.notebook;
   return svg;
 }
