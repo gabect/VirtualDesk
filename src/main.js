@@ -1009,7 +1009,7 @@ function createNotebook(object) {
         }
       });
     });
-    cover.append(el('span', 'spiral'), title, el('span', 'cover-subtitle', { text: 'Open' }));
+    cover.append(title);
     frame.append(cover);
     return frame;
   }
