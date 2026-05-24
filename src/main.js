@@ -336,6 +336,9 @@ function createDockIcon(iconKey) {
 function createDock() {
   const dock = el('nav', `dock dock-${uiPrefs.dockPosition}`, { 'aria-label': 'Herramientas del escritorio' });
   const dockTray = el('div', 'dock-tray');
+  const dockLineLeft = el('span', 'dock-side-line dock-side-line-left', { 'aria-hidden': 'true' });
+  const dockLineRight = el('span', 'dock-side-line dock-side-line-right', { 'aria-hidden': 'true' });
+  const dockBaseline = el('span', 'dock-baseline', { 'aria-hidden': 'true' });
   const buttons = [
     ['notebook-icon', 'notebook', 'Crear libreta', () => addObject({ id: makeId('notebook'), type: 'notebook', name: 'Notebook', status: 'active', ...placeObject(18), open: false, activePage: 0, pages: [''], flipDirection: 'next', rotation: 0, notebookWidth: NOTEBOOK_DEFAULT_DIMENSIONS.width, notebookHeight: NOTEBOOK_DEFAULT_DIMENSIONS.height })],
     ['sticky-icon', 'sticky', 'Crear nota adhesiva', () => addObject({ id: makeId('note'), type: 'sticky', status: 'active', ...placeObject(42), content: '' })],
@@ -346,11 +349,12 @@ function createDock() {
   ];
 
   buttons.forEach(([className, icon, label, handler]) => {
-    const button = el('button', `dock-button ${className}`, { title: label, 'aria-label': label, onClick: handler });
+    const button = el('button', `dock-button ${className}`, { type: 'button', title: label, 'aria-label': label, onClick: handler });
     button.append(createDockIcon(icon));
     dockTray.append(button);
   });
-  dock.append(dockTray);
+
+  dock.append(dockLineLeft, dockTray, dockLineRight, dockBaseline);
   return dock;
 }
 

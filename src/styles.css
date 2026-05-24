@@ -2085,3 +2085,136 @@ button {
 .widget-focus-close,.widget-focus-toggle,.notebook-toolbar button,.page-controls button,.todo-add button,.auth-action { background:#fff; border:1px solid var(--ui-border); box-shadow:none; }
 .widget-focus-close:hover,.widget-focus-toggle:hover,.notebook-toolbar button:hover,.page-controls button:hover,.todo-add button:hover { background: var(--ui-hover); }
 .widget-focus-close:focus-visible,.widget-focus-toggle:focus-visible,.notebook-toolbar button:focus-visible,.page-controls button:focus-visible,.todo-add button:focus-visible,.auth-action:focus-visible,.dock-button:focus-visible{ outline:1px solid #111; outline-offset:1px; }
+
+/* 2026 ZONE Desk dock rebuild: flat line-art system */
+.dock {
+  position: fixed;
+  z-index: 90;
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+}
+.dock-left,
+.dock-right,
+.dock-top,
+.dock-bottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 18px;
+  transform: translateX(-50%);
+}
+.dock-tray {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #202226;
+  border-radius: 2px;
+  background: #f7f7f4;
+  box-shadow: none;
+  background-image: none;
+}
+.dock-side-line {
+  width: 10px;
+  height: 1px;
+  background: #202226;
+  opacity: .8;
+}
+.dock-baseline {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: calc(100% - 24px);
+  max-width: 420px;
+  height: 1px;
+  background: #202226;
+  transform: translateX(-50%);
+  opacity: .7;
+}
+.dock-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 1px;
+  background: transparent;
+  box-shadow: none;
+  color: #111;
+  opacity: 1;
+  filter: none;
+}
+.dock-button:hover,
+.dock-button:focus-visible {
+  background: transparent;
+  border-color: #202226;
+  transform: none;
+}
+.dock-button:active {
+  background: transparent;
+}
+.dock-icon-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  overflow: visible;
+  color: #111;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  opacity: 1;
+  filter: none;
+}
+.dock-icon-svg * { vector-effect: non-scaling-stroke; }
+
+.trash-can {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: #111;
+}
+.trash-icon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.trash-icon-svg {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.trash-lid {
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+.trash-can.is-drop-target .trash-lid {
+  opacity: 1;
+}
+.trash-body,
+.trash-lid {
+  fill: none;
+}
