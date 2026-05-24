@@ -89,8 +89,8 @@ button {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 6px 8px;
   border: 1px solid #202226;
   border-radius: 2px;
   background: #f7f7f4;
@@ -107,12 +107,14 @@ button {
 .dock-button {
   position: relative;
   z-index: 1;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0;
+  line-height: 0;
   border: 1px solid transparent;
   border-radius: 1px;
   background: transparent;
@@ -132,8 +134,8 @@ button {
 
 .dock-icon-svg {
   display: block !important;
-  width: 28px !important;
-  height: 28px !important;
+  width: 30px !important;
+  height: 30px !important;
   overflow: visible;
   stroke: #111 !important;
   fill: none !important;
