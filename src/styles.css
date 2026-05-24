@@ -2058,12 +2058,95 @@ button {
 .desk-brand-logo { width:16px; height:16px; filter:none; }
 .desk-brand-copy strong{ font-size:12px; letter-spacing:.02em; font-weight:600; }
 
-.notebook.closed .notebook-cover { box-shadow:none; border:1px solid var(--ui-border); background:#fff; position:relative; padding:16px 16px 14px 22px; }
-.notebook.closed .notebook-cover::before { content:""; position:absolute; left:12px; top:10px; bottom:10px; border-left:1px solid #111; opacity:.85; }
-.notebook.closed .notebook-cover::after { content:""; position:absolute; left:8px; top:18px; width:6px; height:6px; border-top:1px solid #111; border-bottom:1px solid #111; opacity:.85; }
-.cover-title { margin-top: 20px; font-weight: 600; letter-spacing: .01em; text-align:left; }
-.cover-subtitle { margin-top: 6px; font-size: 10px; letter-spacing: .08em; opacity: .55; text-transform: uppercase; text-align:left; }
-.notebook.closed:hover .notebook-cover { border-color: rgba(17,19,24,.34); }
+.notebook.closed .notebook-cover {
+  box-shadow:none;
+  border:1px solid #15171c;
+  background:#f7f8f9;
+  position:relative;
+  border-radius:3px;
+  padding:20px 18px 16px 24px;
+  overflow:hidden;
+}
+
+.notebook.closed .notebook-cover::before {
+  content:"";
+  position:absolute;
+  inset:8px 8px 8px 20px;
+  z-index:0;
+  background:
+    radial-gradient(130% 100% at 8% 14%, rgba(20, 22, 28, .86) 0 22%, transparent 23%),
+    radial-gradient(80% 95% at 34% 22%, rgba(28, 31, 36, .5) 0 26%, transparent 27%),
+    radial-gradient(120% 100% at 68% 14%, rgba(19, 21, 26, .74) 0 20%, transparent 21%),
+    radial-gradient(90% 80% at 82% 40%, rgba(17, 19, 24, .66) 0 24%, transparent 25%),
+    radial-gradient(110% 88% at 18% 56%, rgba(30, 33, 38, .5) 0 24%, transparent 25%),
+    radial-gradient(120% 100% at 56% 64%, rgba(17, 19, 24, .8) 0 25%, transparent 26%),
+    radial-gradient(90% 80% at 86% 78%, rgba(17, 19, 24, .6) 0 22%, transparent 23%),
+    radial-gradient(100% 100% at 34% 84%, rgba(17, 19, 24, .64) 0 24%, transparent 25%),
+    #f5f6f7;
+  opacity:.34;
+}
+
+.notebook.closed .notebook-cover::after {
+  content:"";
+  position:absolute;
+  left:10px;
+  top:10px;
+  bottom:10px;
+  width:8px;
+  z-index:2;
+  background:
+    linear-gradient(#17191f,#17191f) left center/1px 100% no-repeat,
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 12px,
+      rgba(17,19,24,.78) 12px 13px,
+      transparent 13px 24px
+    );
+}
+
+.notebook.closed .spiral { display:none; }
+
+.notebook.closed .cover-title,
+.notebook.closed .cover-subtitle {
+  position:relative;
+  z-index:3;
+  margin-left:0;
+  text-align:center;
+  color:#111;
+}
+
+.notebook.closed .cover-title {
+  margin:56px auto 0;
+  width:calc(100% - 44px);
+  min-height:32px;
+  max-width:150px;
+  padding:8px 10px;
+  border:1px solid #17191f;
+  background:#fafafa;
+  font-weight:600;
+  font-size:calc(15px * var(--notebook-scale));
+  letter-spacing:.01em;
+  line-height:1.2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  word-break:break-word;
+}
+
+.notebook.closed .cover-subtitle {
+  margin:4px auto 0;
+  width:calc(100% - 44px);
+  max-width:150px;
+  border:1px solid #17191f;
+  border-top:none;
+  background:#fafafa;
+  padding:3px 8px 4px;
+  font-size:9px;
+  letter-spacing:.12em;
+  opacity:.72;
+}
+
+.notebook.closed:hover .notebook-cover { border-color:#101217; }
 .notebook-open,.notebook-page,.notebook-toolbar,.page-controls { box-shadow:none; }
 .notebook-toolbar { padding: 3px 5px; }
 .notebook-page textarea { padding: 18px 16px 16px; }
