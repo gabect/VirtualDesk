@@ -2075,19 +2075,11 @@ button {
   z-index:0;
   background-color:#eceef1;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(18,20,25,.62) 0 1px, transparent 1.2px),
-    radial-gradient(circle at 78% 14%, rgba(29,33,40,.58) 0 1px, transparent 1.2px),
-    radial-gradient(circle at 24% 71%, rgba(21,24,30,.56) 0 1.1px, transparent 1.3px),
-    radial-gradient(circle at 63% 68%, rgba(36,40,48,.52) 0 1px, transparent 1.2px),
-    radial-gradient(circle at 45% 34%, rgba(14,17,22,.48) 0 .9px, transparent 1.15px),
-    radial-gradient(circle at 88% 62%, rgba(44,49,58,.44) 0 .9px, transparent 1.2px),
-    radial-gradient(circle at 19% 46%, rgba(241,243,247,.84) 0 1.3px, transparent 1.6px),
-    radial-gradient(circle at 71% 41%, rgba(235,238,243,.78) 0 1.2px, transparent 1.5px),
-    radial-gradient(circle at 53% 86%, rgba(225,229,235,.72) 0 1.2px, transparent 1.45px),
-    radial-gradient(circle at 33% 56%, rgba(34,37,45,.36) 0 1.6px, transparent 1.9px),
-    radial-gradient(circle at 58% 22%, rgba(213,217,223,.74) 0 2px, transparent 2.4px);
-  background-size: 13px 11px, 15px 13px, 17px 14px, 19px 16px, 12px 10px, 20px 17px, 23px 20px, 27px 23px, 29px 25px, 37px 31px, 43px 36px;
-  background-position: 0 0, 3px 2px, 7px 5px, 11px 3px, 2px 8px, 9px 11px, 4px 1px, 13px 7px, 16px 12px, 6px 15px, 0 0;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 540'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' seed='47'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3CfeFuncG type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3CfeFuncB type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='420' height='540' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E"),
+    linear-gradient(#eff1f4,#e7eaee);
+  background-size: 100% 100%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .notebook.closed .notebook-cover::after {
