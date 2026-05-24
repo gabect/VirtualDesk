@@ -2060,8 +2060,8 @@ button {
 
 .notebook.closed .notebook-cover {
   box-shadow:none;
-  border:1px solid #17191f;
-  background:#eef0f3;
+  border:1px solid #000;
+  background:#fff;
   position:relative;
   border-radius:0;
   padding:18px 16px 14px 24px;
@@ -2073,11 +2073,9 @@ button {
   position:absolute;
   inset:2px;
   z-index:0;
-  background-color:#eceef1;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 540'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' seed='47'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3CfeFuncG type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3CfeFuncB type='gamma' amplitude='1' exponent='1.25' offset='0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='420' height='540' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E"),
-    linear-gradient(#eff1f4,#e7eaee);
-  background-size: 100% 100%, 100% 100%;
+  background-color:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 540'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.25' numOctaves='3' seed='83' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='discrete' tableValues='0 1'/%3E%3CfeFuncG type='discrete' tableValues='0 1'/%3E%3CfeFuncB type='discrete' tableValues='0 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='420' height='540' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -2097,9 +2095,9 @@ button {
   max-width:198px;
   min-height:78px;
   padding:13px 15px;
-  border:1px solid #17191f;
-  background:#fafafa;
-  color:#111;
+  border:1px solid #000;
+  background:#fff;
+  color:#000;
   font-weight:600;
   font-size:calc(14.5px * var(--notebook-scale));
   letter-spacing:.01em;
@@ -2113,7 +2111,7 @@ button {
   hyphens:none;
 }
 
-.notebook.closed:hover .notebook-cover { border-color:#101217; }
+.notebook.closed:hover .notebook-cover { border-color:#000; }
 
 .notebook-open,.notebook-page,.notebook-toolbar,.page-controls { box-shadow:none; }
 .notebook-toolbar { padding: 3px 5px; }
