@@ -315,14 +315,20 @@ function applyBackground(main) {
 
 function createDockIcon(iconKey) {
   const icons = {
-    notebook: '<path d="M18 8h20a4 4 0 0 1 4 4v40H18a4 4 0 0 0-4 4V12a4 4 0 0 1 4-4Z"/><path d="M18 8v48"/><path d="M24 16h12M24 24h12"/>',
-    sticky: '<rect x="14" y="12" width="36" height="36" rx="2"/><path d="M38 48V34h12"/>',
-    todo: '<rect x="12" y="10" width="40" height="44" rx="3"/><path d="M22 22l4 4 7-8M22 34h20M22 42h16"/>',
-    pomodoro: '<circle cx="32" cy="34" r="16"/><path d="M32 34V24M32 34l8 4M24 10h16M28 6h8"/>',
-    focus: '<path d="M18 36a14 14 0 0 1 28 0"/><rect x="14" y="34" width="8" height="12" rx="3"/><rect x="42" y="34" width="8" height="12" rx="3"/><path d="M32 46v6"/>',
-    settings: '<circle cx="32" cy="32" r="7"/><path d="M32 12v6M32 46v6M12 32h6M46 32h6M18.5 18.5l4.2 4.2M41.3 41.3l4.2 4.2M45.5 18.5l-4.2 4.2M22.7 41.3l-4.2 4.2"/>'
+    notebook: '<rect x="18" y="10" width="30" height="44"/><path d="M24 16h2M24 24h2M24 32h2M24 40h2M30 24h12M30 32h12M30 40h9"/>',
+    sticky: '<rect x="16" y="12" width="32" height="40"/><path d="M20 20h24M22 30h20M22 38h18M22 46h14"/>',
+    todo: '<rect x="14" y="10" width="36" height="44"/><path d="M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13"/>',
+    pomodoro: '<circle cx="32" cy="32" r="20"/><path d="M32 32 44 23A20 20 0 0 1 50 32Z"/><path d="M32 32 26 23"/>',
+    focus: '<path d="M20 18v28M30 18v28M38 18l12 14-12 14z"/>',
+    settings: '<rect x="16" y="20" width="32" height="30"/><path d="M26 14h12v6H26zM16 33h32M29 30h6v6h-6z"/>'
   };
-  const svg = el('svg', 'dock-icon-svg', { viewBox: '0 0 64 64', 'aria-hidden': 'true', focusable: 'false' });
+  const svg = el('svg', 'dock-icon-svg', {
+    viewBox: '0 0 64 64',
+    'aria-hidden': 'true',
+    focusable: 'false',
+    fill: 'none',
+    stroke: 'currentColor'
+  });
   svg.innerHTML = icons[iconKey] || icons.notebook;
   return svg;
 }
@@ -1755,8 +1761,8 @@ function createTrashCan() {
   button.append(el('span', 'trash-icon', {
     html: `
       <svg class="trash-icon-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-        <path class="trash-lid" d="M12 10 L52 6" />
-        <path class="trash-body" d="M10 14 L54 14 L45 58 L19 58 Z" />
+        <path class="trash-lid" d="M18 18 L46 12" />
+        <path class="trash-body" d="M12 18 L52 18 L44 52 L20 52 Z" />
       </svg>
     `
   }));
