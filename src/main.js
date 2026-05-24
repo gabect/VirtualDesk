@@ -335,9 +335,10 @@ function createDockIcon(iconKey) {
       ['path', { d: 'M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13' }]
     ],
     pomodoro: [
-      ['circle', { cx: 32, cy: 32, r: 20 }],
-      ['path', { d: 'M32 32 44 23A20 20 0 0 1 50 32Z' }],
-      ['path', { d: 'M32 32 26 23' }]
+      ['circle', { cx: 32, cy: 32, r: 18 }],
+      ['circle', { cx: 42, cy: 22, r: 3.5 }],
+      ['path', { d: 'M32 32 L39 26' }],
+      ['path', { d: 'M32 18 L32 22' }]
     ],
     focus: [
       ['path', { d: 'M20 18v28M30 18v28M38 18l12 14-12 14z' }]
