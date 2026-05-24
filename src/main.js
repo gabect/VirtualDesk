@@ -315,6 +315,39 @@ function applyBackground(main) {
 
 function createDockIcon(iconKey) {
   const NS = 'http://www.w3.org/2000/svg';
+  const iconShapes = {
+    notebook: [
+      ['rect', { x: 20, y: 10, width: 30, height: 44 }],
+      ['path', { d: 'M14 18 H24' }],
+      ['path', { d: 'M14 26 H24' }],
+      ['path', { d: 'M14 34 H24' }],
+      ['path', { d: 'M14 42 H24' }],
+      ['path', { d: 'M28 24 H43' }],
+      ['path', { d: 'M28 32 H43' }],
+      ['path', { d: 'M28 40 H39' }]
+    ],
+    sticky: [
+      ['rect', { x: 16, y: 12, width: 32, height: 40 }],
+      ['path', { d: 'M20 20h24M22 30h20M22 38h18M22 46h14' }]
+    ],
+    todo: [
+      ['rect', { x: 14, y: 10, width: 36, height: 44 }],
+      ['path', { d: 'M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13' }]
+    ],
+    pomodoro: [
+      ['circle', { cx: 32, cy: 32, r: 20 }],
+      ['path', { d: 'M32 32 44 23A20 20 0 0 1 50 32Z' }],
+      ['path', { d: 'M32 32 26 23' }]
+    ],
+    focus: [
+      ['path', { d: 'M20 18v28M30 18v28M38 18l12 14-12 14z' }]
+    ],
+    settings: [
+      ['rect', { x: 16, y: 20, width: 32, height: 30 }],
+      ['path', { d: 'M26 14h12v6H26zM16 33h32M29 30h6v6h-6z' }]
+    ]
+  };
+
   const svg = document.createElementNS(NS, 'svg');
   svg.classList.add('dock-icon-svg');
   svg.setAttribute('viewBox', '0 0 64 64');
@@ -326,49 +359,12 @@ function createDockIcon(iconKey) {
   svg.setAttribute('stroke-linecap', 'butt');
   svg.setAttribute('stroke-linejoin', 'miter');
 
-  const add = (tag, attrs) => {
+  const shapeList = iconShapes[iconKey] || iconShapes.notebook;
+  shapeList.forEach(([tag, attrs]) => {
     const node = document.createElementNS(NS, tag);
     Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
     svg.append(node);
-  };
-
-  const drawNotebook = () => {
-    add('rect', { x: 20, y: 10, width: 30, height: 44 });
-    add('path', { d: 'M14 18 H24' });
-    add('path', { d: 'M14 26 H24' });
-    add('path', { d: 'M14 34 H24' });
-    add('path', { d: 'M14 42 H24' });
-    add('path', { d: 'M28 24 H43' });
-    add('path', { d: 'M28 32 H43' });
-    add('path', { d: 'M28 40 H39' });
-  };
-
-  switch (iconKey) {
-    case 'sticky':
-      add('rect', { x: 16, y: 12, width: 32, height: 40 });
-      add('path', { d: 'M20 20h24M22 30h20M22 38h18M22 46h14' });
-      break;
-    case 'todo':
-      add('rect', { x: 14, y: 10, width: 36, height: 44 });
-      add('path', { d: 'M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13' });
-      break;
-    case 'pomodoro':
-      add('circle', { cx: 32, cy: 32, r: 20 });
-      add('path', { d: 'M32 32 44 23A20 20 0 0 1 50 32Z' });
-      add('path', { d: 'M32 32 26 23' });
-      break;
-    case 'focus':
-      add('path', { d: 'M20 18v28M30 18v28M38 18l12 14-12 14z' });
-      break;
-    case 'settings':
-      add('rect', { x: 16, y: 20, width: 32, height: 30 });
-      add('path', { d: 'M26 14h12v6H26zM16 33h32M29 30h6v6h-6z' });
-      break;
-    case 'notebook':
-    default:
-      drawNotebook();
-      break;
-  }
+  });
 
   return svg;
 }
