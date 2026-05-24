@@ -2218,3 +2218,45 @@ button {
 .trash-lid {
   fill: none;
 }
+
+
+/* Dock icon visibility hardening */
+.dock-tray::before,
+.dock-tray::after {
+  display: none !important;
+  content: none !important;
+}
+
+.dock-button {
+  position: relative;
+  z-index: 1;
+  color: #111 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.dock-icon-svg {
+  position: relative;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  display: block;
+  color: #111 !important;
+  stroke: #111 !important;
+  fill: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  overflow: visible;
+}
+
+.dock-icon-svg * {
+  stroke: #111 !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+  opacity: 1 !important;
+}

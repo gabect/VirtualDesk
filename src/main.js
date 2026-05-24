@@ -315,7 +315,16 @@ function applyBackground(main) {
 
 function createDockIcon(iconKey) {
   const icons = {
-    notebook: '<rect x="18" y="10" width="28" height="44"/><path d="M14 18h8M14 26h8M14 34h8M14 42h8M25 22h15M25 31h15M25 40h11"/>',
+    notebook: `
+  <rect x="20" y="10" width="30" height="44" />
+  <path d="M14 18 H24" />
+  <path d="M14 26 H24" />
+  <path d="M14 34 H24" />
+  <path d="M14 42 H24" />
+  <path d="M28 24 H43" />
+  <path d="M28 32 H43" />
+  <path d="M28 40 H39" />
+`,
     sticky: '<rect x="16" y="12" width="32" height="40"/><path d="M20 20h24M22 30h20M22 38h18M22 46h14"/>',
     todo: '<rect x="14" y="10" width="36" height="44"/><path d="M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13"/>',
     pomodoro: '<circle cx="32" cy="32" r="20"/><path d="M32 32 44 23A20 20 0 0 1 50 32Z"/><path d="M32 32 26 23"/>',
@@ -327,7 +336,10 @@ function createDockIcon(iconKey) {
     'aria-hidden': 'true',
     focusable: 'false',
     fill: 'none',
-    stroke: 'currentColor'
+    stroke: 'currentColor',
+    'stroke-width': '2',
+    'stroke-linecap': 'butt',
+    'stroke-linejoin': 'miter'
   });
   svg.innerHTML = icons[iconKey] || icons.notebook;
   return svg;
