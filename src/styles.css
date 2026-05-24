@@ -58,76 +58,104 @@ button {
   box-shadow: inset 0 0 220px rgba(38, 25, 12, .35), inset 0 -80px 130px rgba(24, 14, 8, .16);
 }
 
+
 .dock {
   position: fixed;
-  z-index: 50;
-  left: 18px;
-  top: 50%;
-  transform: translateY(-50%);
+  z-index: 90;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 0;
-  border: 0;
-  overflow: visible;
+  background: transparent;
+}
+
+.dock-left,
+.dock-right,
+.dock-top,
+.dock-bottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 18px;
+  transform: translateX(-50%);
 }
 
 .dock-tray {
-  position: relative;
-  display: grid;
-  gap: 14px;
-  padding: 14px 10px;
-  border-radius: 24px;
-  background-image: url('./assets/maderadock.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  border: 1px solid rgba(255, 235, 200, 0.48);
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.32),
-    inset 0 1px rgba(255, 255, 255, 0.42),
-    inset 0 -10px 18px rgba(55, 28, 12, 0.24);
-  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #202226;
+  border-radius: 2px;
+  background: #f7f7f4;
+  box-shadow: none;
+  background-image: none;
 }
 
-.dock-tray::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.24),
-      transparent 45%,
-      rgba(55, 28, 12, 0.16)
-    );
+.dock-tray::before,
+.dock-tray::after {
+  display: none !important;
+  content: none !important;
 }
 
 .dock-button {
-  isolation: isolate;
   position: relative;
   z-index: 1;
-  width: 56px;
-  height: 56px;
-  border: 0;
-  border-radius: 16px;
-  color: #1e2f49;
-  background: linear-gradient(180deg, #f7f2e5 0%, #e9dcc2 56%, #d4c29f 100%);
-  border: 1px solid rgba(108, 79, 51, .28);
-  box-shadow: inset 0 1px rgba(255,255,255,.94), inset 0 -8px 12px rgba(90,62,32,.18), 0 9px 16px rgba(0,0,0,.22);
-  transition: transform .18s ease, filter .18s ease;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 1px;
+  background: transparent;
+  box-shadow: none;
+  color: #111 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
 
 .dock-button:hover,
 .dock-button:focus-visible {
-  transform: translateX(4px) translateY(-2px) scale(1.05);
-  filter: brightness(1.05);
+  background: transparent;
+  border-color: #202226;
+  transform: none;
 }
 
-.dock-button span {
-  display: block;
-  font-size: 30px;
-  filter: drop-shadow(0 1px 1px rgba(255,255,255,.8));
+.dock-icon-svg {
+  display: block !important;
+  width: 28px !important;
+  height: 28px !important;
+  overflow: visible;
+  stroke: #111 !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
+
+.dock-icon-svg * {
+  stroke: #111 !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+  opacity: 1 !important;
+}
+
 
 .background-panel,
 .fixed-widgets {
@@ -1972,17 +2000,6 @@ button {
 .desk-brand-copy strong{ font-size:13px; font-weight:600; }
 .desk-brand-copy small{ display:none; }
 
-.dock { z-index:70; transform:none; }
-.dock-left{ left:12px; top:56px; bottom:12px; display:flex; align-items:center; }
-.dock-right{ right:12px; left:auto; top:56px; bottom:12px; display:flex; align-items:center; }
-.dock-top{ top:12px; left:50%; transform:translateX(-50%); }
-.dock-bottom{ bottom:12px; left:50%; top:auto; transform:translateX(-50%); }
-.dock-tray { display:flex; gap:8px; padding:8px; border-radius:10px; border:1px solid var(--ui-border); background:var(--ui-panel); box-shadow:none; }
-.dock-left .dock-tray,.dock-right .dock-tray{ flex-direction:column; }
-.dock-top .dock-tray,.dock-bottom .dock-tray{ flex-direction:row; }
-.dock-button { width:40px; height:40px; border-radius:8px; border:1px solid var(--ui-border); background:#fff; box-shadow:none; }
-.dock-button span{ font-size:20px; filter:none; }
-
 .settings-overlay{ position:fixed; inset:0; z-index:1800; display:grid; place-items:center; padding:16px; background:rgba(12,16,24,0.24); backdrop-filter: blur(10px); }
 .settings-panel{ box-sizing:border-box; position:relative; width:min(420px,calc(100vw - 32px)); max-width:100%; max-height:calc(100dvh - 32px); overflow-y:auto; overflow-x:hidden; padding:14px; border:1px solid var(--ui-border); background:var(--ui-panel); border-radius:8px; display:grid; gap:10px; }
 .settings-panel,
@@ -2039,18 +2056,6 @@ button {
 .desk-brand-logo { width:16px; height:16px; filter:none; }
 .desk-brand-copy strong{ font-size:12px; letter-spacing:.02em; font-weight:600; }
 
-.dock-left{ left:10px; top:48px; bottom:10px; }
-.dock-right{ right:10px; top:48px; bottom:10px; }
-.dock-top{ top:10px; }
-.dock-bottom{ bottom:10px; }
-.dock-tray { gap:6px; padding:6px; border-radius:9px; background: var(--dock-bg); border:1px solid var(--dock-border); box-shadow:none; filter:none; }
-.dock-button { width:36px; height:36px; border-radius:7px; background: transparent; border:1px solid transparent; transition: background-color .14s ease, border-color .14s ease; color: var(--icon-color); opacity:1; filter:none; display:grid; place-items:center; mix-blend-mode:normal; }
-.dock-button:hover,.dock-button:focus-visible { background: var(--ui-hover); border-color: var(--ui-border); transform:none; }
-.dock-button:active { background: var(--ui-active); }
-.dock-button svg,
-.dock-icon-svg { width:22px; height:22px; display:block; color:currentColor; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:square; stroke-linejoin:miter; opacity:1; filter:none; overflow:visible; }
-.dock-icon-svg * { vector-effect: non-scaling-stroke; opacity: 1; }
-
 .notebook.closed .notebook-cover { box-shadow:none; border:1px solid var(--ui-border); background:#fff; position:relative; padding:16px 16px 14px 22px; }
 .notebook.closed .notebook-cover::before { content:""; position:absolute; left:12px; top:10px; bottom:10px; border-left:1px solid #111; opacity:.85; }
 .notebook.closed .notebook-cover::after { content:""; position:absolute; left:8px; top:18px; width:6px; height:6px; border-top:1px solid #111; border-bottom:1px solid #111; opacity:.85; }
@@ -2085,178 +2090,3 @@ button {
 .widget-focus-close,.widget-focus-toggle,.notebook-toolbar button,.page-controls button,.todo-add button,.auth-action { background:#fff; border:1px solid var(--ui-border); box-shadow:none; }
 .widget-focus-close:hover,.widget-focus-toggle:hover,.notebook-toolbar button:hover,.page-controls button:hover,.todo-add button:hover { background: var(--ui-hover); }
 .widget-focus-close:focus-visible,.widget-focus-toggle:focus-visible,.notebook-toolbar button:focus-visible,.page-controls button:focus-visible,.todo-add button:focus-visible,.auth-action:focus-visible,.dock-button:focus-visible{ outline:1px solid #111; outline-offset:1px; }
-
-/* 2026 ZONE Desk dock rebuild: flat line-art system */
-.dock {
-  position: fixed;
-  z-index: 90;
-  left: 50%;
-  right: auto;
-  top: auto;
-  bottom: 18px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0;
-  background: transparent;
-}
-.dock-left,
-.dock-right,
-.dock-top,
-.dock-bottom {
-  left: 50%;
-  right: auto;
-  top: auto;
-  bottom: 18px;
-  transform: translateX(-50%);
-}
-.dock-tray {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid #202226;
-  border-radius: 2px;
-  background: #f7f7f4;
-  box-shadow: none;
-  background-image: none;
-}
-.dock-side-line {
-  width: 10px;
-  height: 1px;
-  background: #202226;
-  opacity: .8;
-}
-.dock-baseline {
-  position: absolute;
-  left: 50%;
-  bottom: -7px;
-  width: calc(100% - 24px);
-  max-width: 420px;
-  height: 1px;
-  background: #202226;
-  transform: translateX(-50%);
-  opacity: .7;
-}
-.dock-button {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 1px;
-  background: transparent;
-  box-shadow: none;
-  color: #111;
-  opacity: 1;
-  filter: none;
-}
-.dock-button:hover,
-.dock-button:focus-visible {
-  background: transparent;
-  border-color: #202226;
-  transform: none;
-}
-.dock-button:active {
-  background: transparent;
-}
-.dock-icon-svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-  overflow: visible;
-  color: #111;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
-  opacity: 1;
-  filter: none;
-}
-.dock-icon-svg * { vector-effect: non-scaling-stroke; }
-
-.trash-can {
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  color: #111;
-}
-.trash-icon {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-}
-.trash-icon-svg {
-  width: 28px;
-  height: 28px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
-}
-.trash-lid {
-  opacity: 0;
-  transition: opacity .12s ease;
-}
-.trash-can.is-drop-target .trash-lid {
-  opacity: 1;
-}
-.trash-body,
-.trash-lid {
-  fill: none;
-}
-
-
-/* Dock icon visibility hardening */
-.dock-tray::before,
-.dock-tray::after {
-  display: none !important;
-  content: none !important;
-}
-
-.dock-button {
-  position: relative;
-  z-index: 1;
-  color: #111 !important;
-  opacity: 1 !important;
-  filter: none !important;
-  mix-blend-mode: normal !important;
-}
-
-.dock-icon-svg {
-  position: relative;
-  z-index: 2;
-  width: 26px;
-  height: 26px;
-  display: block;
-  color: #111 !important;
-  stroke: #111 !important;
-  fill: none !important;
-  opacity: 1 !important;
-  filter: none !important;
-  mix-blend-mode: normal !important;
-  overflow: visible;
-}
-
-.dock-icon-svg * {
-  stroke: #111 !important;
-  fill: none !important;
-  stroke-width: 2 !important;
-  stroke-linecap: butt;
-  stroke-linejoin: miter;
-  vector-effect: non-scaling-stroke;
-  opacity: 1 !important;
-}
