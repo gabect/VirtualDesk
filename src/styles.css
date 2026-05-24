@@ -2071,7 +2071,7 @@ button {
 .notebook.closed .notebook-cover::before {
   content:"";
   position:absolute;
-  inset:8px 8px 8px 20px;
+  inset:2px 2px 2px 14px;
   z-index:0;
   background-color:#eceef1;
   background-image:
@@ -2090,9 +2090,9 @@ button {
 .notebook.closed .notebook-cover::after {
   content:"";
   position:absolute;
-  left:10px;
-  top:10px;
-  bottom:10px;
+  left:6px;
+  top:4px;
+  bottom:4px;
   width:8px;
   z-index:2;
   background:
