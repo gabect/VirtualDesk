@@ -2060,10 +2060,10 @@ button {
 
 .notebook.closed .notebook-cover {
   box-shadow:none;
-  border:1px solid #15171c;
-  background:#f4f5f7;
+  border:1px solid #17191f;
+  background:#eef0f3;
   position:relative;
-  border-radius:2px;
+  border-radius:0;
   padding:18px 16px 14px 24px;
   overflow:hidden;
 }
@@ -2074,19 +2074,16 @@ button {
   inset:8px 8px 8px 20px;
   z-index:0;
   background:
-    linear-gradient(136deg,
-      #1b1d22 0%, #1b1d22 14%,
-      #f3f4f6 14%, #f3f4f6 27%,
-      #30333a 27%, #30333a 38%,
-      #eef0f3 38%, #eef0f3 49%,
-      #22252b 49%, #22252b 61%,
-      #f4f5f7 61%, #f4f5f7 72%,
-      #343740 72%, #343740 84%,
-      #f1f2f5 84%, #f1f2f5 100%
-    );
-  background-size: 260px 220px;
-  background-position: center;
-  opacity:.68;
+    conic-gradient(from 18deg at 11% 13%, #1a1c21 0 16%, #dde0e5 16% 31%, #2b2e36 31% 45%, #e6e8ec 45% 61%, #20242b 61% 77%, #f0f2f5 77% 100%),
+    conic-gradient(from 202deg at 34% 28%, #ebedf1 0 13%, #191c22 13% 28%, #e3e6eb 28% 40%, #2d3139 40% 56%, #eceff3 56% 68%, #1f232a 68% 82%, #f1f3f6 82% 100%),
+    conic-gradient(from 144deg at 66% 36%, #e5e8ed 0 11%, #2c3038 11% 24%, #eff1f4 24% 38%, #1a1d23 38% 52%, #e2e5ea 52% 66%, #30353e 66% 80%, #f0f2f5 80% 100%),
+    conic-gradient(from 58deg at 82% 18%, #f2f4f7 0 14%, #23272e 14% 30%, #e3e6eb 30% 44%, #181b21 44% 57%, #e8ebef 57% 73%, #2e333b 73% 87%, #f1f2f5 87% 100%),
+    conic-gradient(from 246deg at 22% 71%, #e6e8ec 0 10%, #1b1f25 10% 23%, #edeff3 23% 35%, #2f343d 35% 49%, #dfe3e8 49% 63%, #20242b 63% 77%, #edf0f4 77% 100%),
+    conic-gradient(from 112deg at 52% 74%, #f2f3f6 0 12%, #252931 12% 26%, #e4e7eb 26% 41%, #191d23 41% 54%, #e9ebef 54% 68%, #30343d 68% 82%, #f1f3f6 82% 100%),
+    conic-gradient(from 294deg at 79% 69%, #dfe3e8 0 9%, #1a1d23 9% 22%, #ebedf1 22% 36%, #2b3038 36% 50%, #f1f2f5 50% 64%, #1f232a 64% 79%, #e6e9ee 79% 100%);
+  background-size: 170px 140px, 180px 150px, 175px 145px, 165px 145px, 176px 150px, 170px 150px, 182px 152px;
+  background-position: -20px -16px, 28px 6px, 98px -10px, 138px 16px, -8px 88px, 66px 100px, 148px 90px;
+  background-repeat: no-repeat;
 }
 
 .notebook.closed .notebook-cover::after {
@@ -2113,16 +2110,16 @@ button {
 .notebook.closed .cover-title {
   position:relative;
   z-index:3;
-  margin:46px auto 0;
-  width:calc(100% - 30px);
-  max-width:178px;
-  min-height:60px;
-  padding:10px 14px;
+  margin:42px auto 0;
+  width:calc(100% - 20px);
+  max-width:192px;
+  min-height:72px;
+  padding:12px 14px;
   border:1px solid #17191f;
   background:#fafafa;
   color:#111;
   font-weight:600;
-  font-size:calc(14px * var(--notebook-scale));
+  font-size:calc(14.5px * var(--notebook-scale));
   letter-spacing:.01em;
   line-height:1.24;
   text-align:center;
