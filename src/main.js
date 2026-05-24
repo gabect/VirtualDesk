@@ -315,7 +315,7 @@ function applyBackground(main) {
 
 function createDockIcon(iconKey) {
   const icons = {
-    notebook: '<rect x="18" y="10" width="30" height="44"/><path d="M24 16h2M24 24h2M24 32h2M24 40h2M30 24h12M30 32h12M30 40h9"/>',
+    notebook: '<rect x="18" y="10" width="28" height="44"/><path d="M14 18h8M14 26h8M14 34h8M14 42h8M25 22h15M25 31h15M25 40h11"/>',
     sticky: '<rect x="16" y="12" width="32" height="40"/><path d="M20 20h24M22 30h20M22 38h18M22 46h14"/>',
     todo: '<rect x="14" y="10" width="36" height="44"/><path d="M24 16v32M18 22h4v4h-4zM18 32h4v4h-4zM18 42h4v4h-4zM28 24h16M28 34h16M28 44h13"/>',
     pomodoro: '<circle cx="32" cy="32" r="20"/><path d="M32 32 44 23A20 20 0 0 1 50 32Z"/><path d="M32 32 26 23"/>',
